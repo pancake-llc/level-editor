@@ -1,5 +1,5 @@
 // ReSharper disable AccessToStaticMemberViaDerivedType
-namespace Client.Editor
+namespace Snorlax.Editor
 {
     using UnityEditor;
     using UnityEditor.SceneManagement;

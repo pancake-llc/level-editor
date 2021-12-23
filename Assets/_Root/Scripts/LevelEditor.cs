@@ -8,7 +8,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Client.Editor
+namespace Snorlax.Editor
 {
     public class LevelEditor : EditorWindow
     {
