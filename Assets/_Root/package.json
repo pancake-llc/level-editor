@@ -1,0 +1,24 @@
+{
+  "name": "com.snorlax.level-editor",
+  "displayName": "Level Editor",
+  "description": "Simple level editor for unity level design",
+  "version": "1.0.0",
+  "unity": "2019.1",
+  "category": "snorlax",
+  "author": {
+    "name": "Snorlax",
+    "email": "phongsoyenmoc.diep@gmail.com",
+    "url": "https://github.com/yenmoc"
+  },
+  "license": "MIT",
+  "keywords": [ "level","editor","design","unity" ],
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:snorluxe/level-editor.git",
+    "directory": "com.snorlax.level-editor"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@snorluxe"
+  }
+}
