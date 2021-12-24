@@ -306,7 +306,7 @@ namespace Snorlax.Editor
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #else
-                UnityEditor.SceneManagement.PrefabStage currentPrefabState;
+                UnityEditor.Experimental.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #endif
 
