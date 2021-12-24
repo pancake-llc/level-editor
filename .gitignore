@@ -15,6 +15,7 @@ lerna-debug.log*
 /[Bb]uild/
 /[Bb]uilds/
 /[Ll]ogs/
+/[Uu]serSettings/
 Assets/AssetStoreTools*
 /UnityGenerated/
 # Library should not freeze version, it should be written in README.

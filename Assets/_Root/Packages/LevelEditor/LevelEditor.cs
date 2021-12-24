@@ -85,7 +85,11 @@ namespace Snorlax.Editor
             void MakeGroupPrefab(string path)
             {
                 string pathInternal = path.Replace(Application.dataPath, "");
-                if (!Directory.Exists(pathInternal)) return;
+                if (!Directory.Exists(pathInternal))
+                {
+                    Debug.LogWarning("[Level Editor]: Can not found folder '" + pathInternal + "'");
+                    return;
+                }
 
                 var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(pathInternal).Where(lo => !(lo is null)).ToList();
                 foreach (var obj in levelObjects)
@@ -305,7 +309,7 @@ namespace Snorlax.Editor
             if (pickObject?.pickedObject)
             {
                 Transform parent = null;
-                
+
 #if UNITY_2020_2_OR_NEWER
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
