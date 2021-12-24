@@ -301,7 +301,6 @@ namespace Snorlax.Editor
             if (pickObject?.pickedObject)
             {
                 Transform parent = null;
-
                 var currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
                 if (currentPrefabState != null)
                 {
