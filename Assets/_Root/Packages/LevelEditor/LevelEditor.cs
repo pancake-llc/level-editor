@@ -84,14 +84,13 @@ namespace Snorlax.Editor
 
             void MakeGroupPrefab(string path)
             {
-                string pathInternal = path.Replace(Application.dataPath, "");
-                if (!Directory.Exists(pathInternal))
+                if (!Directory.Exists(path))
                 {
-                    Debug.LogWarning("[Level Editor]: Can not found folder '" + pathInternal + "'");
+                    Debug.LogWarning("[Level Editor]: Can not found folder '" + path + "'");
                     return;
                 }
 
-                var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(pathInternal).Where(lo => !(lo is null)).ToList();
+                var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "")).Where(lo => !(lo is null)).ToList();
                 foreach (var obj in levelObjects)
                 {
                     var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
