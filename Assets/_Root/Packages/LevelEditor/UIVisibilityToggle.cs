@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 // ReSharper disable AccessToStaticMemberViaDerivedType
 namespace Snorlax.Editor
 {
@@ -78,3 +79,4 @@ namespace Snorlax.Editor
         }
     }
 }
+#endif
