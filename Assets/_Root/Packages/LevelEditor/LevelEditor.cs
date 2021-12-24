@@ -301,10 +301,12 @@ namespace Snorlax.Editor
             if (pickObject?.pickedObject)
             {
                 Transform parent = null;
-                UnityEditor.SceneManagement.PrefabStage currentPrefabState;
+                
 #if UNITY_2020_2_OR_NEWER
+                UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #else
+                UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #endif
 
