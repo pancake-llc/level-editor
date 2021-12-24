@@ -84,7 +84,13 @@ namespace Snorlax.Editor
 
             void MakeGroupPrefab(string path)
             {
-                if (!Directory.Exists(path))
+                string pathLocal = path;
+                if (path.Equals(DEFAULT_FOLDER_PREFAB_PATH))
+                {
+                    pathLocal = pathLocal.Insert(0, $"{Application.dataPath}/");
+                }
+                
+                if (!Directory.Exists(pathLocal))
                 {
                     Debug.LogWarning("[Level Editor]: Can not found folder '" + path + "'");
                     return;
@@ -275,7 +281,8 @@ namespace Snorlax.Editor
 
             bool state;
             Vector3 mousePosition;
-            if (UIVisibilityToggle.sLastModeWas2D)
+            
+            if (sceneView.in2DMode)
             {
                 state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
                 mousePosition = mousePosition2d;
