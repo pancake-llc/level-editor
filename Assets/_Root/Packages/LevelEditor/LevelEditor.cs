@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Snorlax.Common;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -301,7 +302,13 @@ namespace Snorlax.Editor
             if (pickObject?.pickedObject)
             {
                 Transform parent = null;
-                var currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+                PrefabStage currentPrefabState;
+#if UNITY_2020_2_OR_NEWER
+                currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+#else
+                currentPrefabState = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+#endif
+
                 if (currentPrefabState != null)
                 {
                     parent = currentPrefabState.prefabContentsRoot.transform.GetChild(0);
