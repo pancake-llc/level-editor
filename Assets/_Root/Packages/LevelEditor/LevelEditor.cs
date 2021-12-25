@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Snorlax.Common;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -17,10 +18,13 @@ namespace Snorlax.Editor
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
-        private List<string> _pathPrefabFolders = new List<string>();
         private const string COUNT_FOLDER_PREFAB_KEY = "COUNT_FOLDER_PREFAB";
         private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
         private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
+
+        private CustomReorderable _reorderablePath;
+        private SerializedObject _pathFolderSerializedObject;
+        private PathFolder _pathFolder;
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -30,11 +34,42 @@ namespace Snorlax.Editor
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
         }
 
+        private void CreateAsset()
+        {
+            hideFlags = HideFlags.HideAndDontSave;
+            _pathFolder = CreateInstance<PathFolder>();
+        }
+
         private void OnEnable()
         {
+            CreateAsset();
+            _pathFolderSerializedObject = new SerializedObject(_pathFolder);
+            _reorderablePath = new CustomReorderable(_pathFolderSerializedObject.FindProperty("pathFolderPrefabs"), UpdateNumberElement, ActionCreateButtonSearchPath);
+
             RefreshPickObject();
             SceneView.duringSceneGui += OnSceneGUI;
         }
+
+        private void ActionCreateButtonSearchPath(Rect rect, string pathResult, int index)
+        {
+            if (GUI.Button(rect, new GUIContent("", "Select folder"), EditorStyles.colorField))
+            {
+                var path = EditorUtility.OpenFolderPanel("Select folder output", pathResult, "");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    pathResult = path;
+                    if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}"))
+                    {
+                        EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}", pathResult);
+                    }
+                }
+
+                GUI.FocusControl(null);
+            }
+        }
+
+
+        private void UpdateNumberElement(int size) { EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", size); }
 
         private void OnDisable()
         {
@@ -66,18 +101,21 @@ namespace Snorlax.Editor
         private void RefreshPickObject()
         {
             int count = EditorPrefs.GetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", 1);
-            _pathPrefabFolders = new List<string>(count);
-            _pathPrefabFolders.Clear();
-            for (var i = 0; i < count; i++)
+            if (_pathFolder != null)
             {
-                _pathPrefabFolders.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                    ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                    : DEFAULT_FOLDER_PREFAB_PATH);
+                _pathFolder.pathFolderPrefabs = new List<string>(count);
+                _pathFolder.pathFolderPrefabs.Clear();
+                for (var i = 0; i < count; i++)
+                {
+                    _pathFolder.pathFolderPrefabs.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+                        ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+                        : DEFAULT_FOLDER_PREFAB_PATH);
+                }
             }
 
             _pickObjects = new List<PickObject>();
 
-            foreach (string path in _pathPrefabFolders)
+            foreach (string path in _pathFolder.pathFolderPrefabs)
             {
                 MakeGroupPrefab(path);
             }
@@ -89,8 +127,8 @@ namespace Snorlax.Editor
                 {
                     pathLocal = pathLocal.Insert(0, $"{Application.dataPath}/");
                 }
-                
-                if (!Directory.Exists(pathLocal))
+
+                if (!Directory.Exists(pathLocal) || !pathLocal.Contains(Application.dataPath))
                 {
                     Debug.LogWarning("[Level Editor]: Can not found folder '" + path + "'");
                     return;
@@ -125,34 +163,37 @@ namespace Snorlax.Editor
 
             UtilEditor.Section("Map Editor");
 
-            int newCount = Mathf.Max(0, EditorGUILayout.IntField("Size", _pathPrefabFolders.Count));
-
-            EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", newCount);
-            while (newCount < _pathPrefabFolders.Count)
-            {
-                _pathPrefabFolders.RemoveAt(_pathPrefabFolders.Count - 1);
-            }
-
-            while (newCount > _pathPrefabFolders.Count)
-            {
-                _pathPrefabFolders.Add(DEFAULT_FOLDER_PREFAB_PATH);
-            }
-
-            EditorGUILayout.LabelField("Prefab Folder");
-            for (var i = 0; i < _pathPrefabFolders.Count; i++)
-            {
-                EditorGUILayout.BeginHorizontal();
-                string pathPrefabFolder = _pathPrefabFolders[i];
-                string nameFolder = pathPrefabFolder.Split('/').Last();
-                string result = nameFolder.Equals("Prefabs") ? "Root" : nameFolder;
-                EditorGUILayout.LabelField(result);
-                GUI.enabled = false;
-                EditorGUILayout.TextField(pathPrefabFolder);
-                GUI.enabled = true;
-                UtilEditor.PickFolderPath(ref pathPrefabFolder, $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}");
-                _pathPrefabFolders[i] = pathPrefabFolder;
-                EditorGUILayout.EndHorizontal();
-            }
+            _pathFolderSerializedObject?.Update();
+            _reorderablePath?.Draw();
+            _pathFolderSerializedObject?.ApplyModifiedProperties();
+            // int newCount = Mathf.Max(0, EditorGUILayout.IntField("Size", _pathPrefabFolders.Count));
+            //
+            // EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", newCount);
+            // while (newCount < _pathPrefabFolders.Count)
+            // {
+            //     _pathPrefabFolders.RemoveAt(_pathPrefabFolders.Count - 1);
+            // }
+            //
+            // while (newCount > _pathPrefabFolders.Count)
+            // {
+            //     _pathPrefabFolders.Add(DEFAULT_FOLDER_PREFAB_PATH);
+            // }
+            //
+            // EditorGUILayout.LabelField("Prefab Folder");
+            // for (var i = 0; i < _pathPrefabFolders.Count; i++)
+            // {
+            //     EditorGUILayout.BeginHorizontal();
+            //     string pathPrefabFolder = _pathPrefabFolders[i];
+            //     string nameFolder = pathPrefabFolder.Split('/').Last();
+            //     string result = nameFolder.Equals("Prefabs") ? "Root" : nameFolder;
+            //     EditorGUILayout.LabelField(result);
+            //     GUI.enabled = false;
+            //     EditorGUILayout.TextField(pathPrefabFolder);
+            //     GUI.enabled = true;
+            //UtilEditor.PickFolderPath(ref pathPrefabFolder, $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}");
+            //     _pathPrefabFolders[i] = pathPrefabFolder;
+            //     EditorGUILayout.EndHorizontal();
+            // }
 
             if (GUILayout.Button("Refresh all")) RefreshAll();
 
@@ -193,7 +234,7 @@ namespace Snorlax.Editor
 
             var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
             var key = $"{Application.identifier}_MAPEDITOR_FOLDOUT_GROUP_KEY_";
-            var foldouts = new bool[_pathPrefabFolders.Count];
+            var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
 
             int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
 
@@ -203,7 +244,7 @@ namespace Snorlax.Editor
 
                 EditorGUILayout.BeginVertical();
 
-                MakeGroupHeaderButton(ref foldouts[i], _pathPrefabFolders[i].Split('/').Last(), $"{key}_{i}");
+                MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
 
                 EditorGUILayout.EndVertical();
 
@@ -281,7 +322,7 @@ namespace Snorlax.Editor
 
             bool state;
             Vector3 mousePosition;
-            
+
             if (sceneView.in2DMode)
             {
                 state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
@@ -755,6 +796,11 @@ namespace Snorlax.Editor
     {
         public string group;
         public GameObject pickedObject;
+    }
+
+    public class PathFolder : ScriptableObject
+    {
+        public List<string> pathFolderPrefabs = new List<string>();
     }
 }
 #endif
