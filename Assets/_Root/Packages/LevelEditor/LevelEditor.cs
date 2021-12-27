@@ -26,7 +26,7 @@ namespace Snorlax.Editor
         private SerializedObject _pathFolderSerializedObject;
         private PathFolder _pathFolder;
         private SerializedProperty _pathFolderProperty;
-
+        private bool _flagFoldoutPath;
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -253,9 +253,14 @@ namespace Snorlax.Editor
 
             UtilEditor.Section("Map Editor");
 
-            _pathFolderSerializedObject?.Update();
-            _reorderablePath?.DoLayoutList();
-            _pathFolderSerializedObject?.ApplyModifiedProperties();
+            _flagFoldoutPath = EditorGUILayout.Foldout(_flagFoldoutPath, "", true);
+            if (_flagFoldoutPath)
+            {
+                _pathFolderSerializedObject?.Update();
+                _reorderablePath?.DoLayoutList();
+                _pathFolderSerializedObject?.ApplyModifiedProperties();
+            }
+
 
             if (GUILayout.Button("Refresh all")) RefreshAll();
 
