@@ -2,7 +2,7 @@
   "name": "com.snorlax.level-editor",
   "displayName": "Level Editor",
   "description": "Simple level editor for unity level design",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "unity": "2019.1",
   "category": "snorlax",
   "author": {

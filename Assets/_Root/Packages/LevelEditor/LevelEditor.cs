@@ -73,7 +73,7 @@ namespace Snorlax.Editor
                     if (!_pathFolder.pathFolderPrefabs.Contains(pathResult))
                     {
                         if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}")) SavePath(propertyIndex, pathResult);
-                        
+
                         property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
                     }
                     else
@@ -181,12 +181,12 @@ namespace Snorlax.Editor
 
             _pickObjects = new List<PickObject>();
 
-            foreach (string path in _pathFolder.pathFolderPrefabs)
+            for (int i = 0; i < _pathFolder.pathFolderPrefabs.ToList().Count; i++)
             {
-                MakeGroupPrefab(path);
+                MakeGroupPrefab(i, _pathFolder.pathFolderPrefabs[i], ref _pathFolder.pathFolderPrefabs);
             }
 
-            void MakeGroupPrefab(string path)
+            void MakeGroupPrefab(int index, string path, ref List<string> paths)
             {
                 string pathLocal = path;
                 if (path.Equals(DEFAULT_FOLDER_PREFAB_PATH))
@@ -201,6 +201,14 @@ namespace Snorlax.Editor
                 }
 
                 var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "")).Where(lo => !(lo is null)).ToList();
+                if (levelObjects.Count == 0)
+                {
+                    paths.Remove(path);
+                    EditorPrefs.DeleteKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}");
+                    EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", paths.Count);
+                    return;
+                }
+
                 foreach (var obj in levelObjects)
                 {
                     var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
