@@ -51,7 +51,6 @@ namespace Snorlax.Editor
                 OnAddCallback,
                 OnRemoveCallback,
                 OnReorderCallbackWithDetails,
-                null,
                 ActionCreateButtonSearchPath);
 
             RefreshPickObject();
