@@ -4,7 +4,7 @@ Add
 
 ```csharp
 "com.snorlax.level-editor": "https://github.com/snorluxe/level-editor.git?path=Assets/_Root/UnityPackage#1.0.14",
-"com.snorlax.common": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.9",
+"com.snorlax.common": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.10",
 ```
 
 To `Packages/manifest.json`
