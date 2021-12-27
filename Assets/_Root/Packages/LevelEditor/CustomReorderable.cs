@@ -26,14 +26,14 @@ namespace Snorlax.Editor
 
         private readonly ReorderableList _reorderableList;
 
-        public CustomReorderable(SerializedProperty property, Action<int> actionUpdateNumberElement = null, Action<Rect, string, int> actionCreateButtonSearchPath = null)
+        public CustomReorderable(SerializedProperty property, Action<int> actionUpdateNumberElement = null, CreateButtonSearchPathDelegate actionCreateButtonSearchPath = null)
         {
             _reorderableList = CreateInstance(property, actionUpdateNumberElement, actionCreateButtonSearchPath);
         }
 
         public void Draw() { _reorderableList.DoLayoutList(); }
 
-        private ReorderableList CreateInstance(SerializedProperty property, Action<int> actionAddElement, Action<Rect, string, int> actionCreateButtonSearchPath)
+        private ReorderableList CreateInstance(SerializedProperty property, Action<int> actionAddElement, CreateButtonSearchPathDelegate actionCreateButtonSearchPath)
         {
             return new ReorderableList(property.serializedObject,
                 property,
@@ -76,7 +76,7 @@ namespace Snorlax.Editor
                     // todo
                     rect.xMin -= 20;
                     rect.width = 20f;
-                    actionCreateButtonSearchPath?.Invoke(rect, property.GetArrayElementAtIndex(index).ToString(), index);
+                    actionCreateButtonSearchPath?.Invoke(rect, ref property, index);
                 },
                 drawFooterCallback = _ => { },
                 footerHeight = 0f,

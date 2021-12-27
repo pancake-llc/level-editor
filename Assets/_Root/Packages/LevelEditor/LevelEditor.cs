@@ -6,12 +6,13 @@ using System.IO;
 using System.Linq;
 using Snorlax.Common;
 using UnityEditor;
-using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace Snorlax.Editor
 {
+    public delegate void CreateButtonSearchPathDelegate(Rect rect, ref SerializedProperty property, int index);
+
     public class LevelEditor : EditorWindow
     {
         private Vector3 _prevPosition;
@@ -25,6 +26,7 @@ namespace Snorlax.Editor
         private CustomReorderable _reorderablePath;
         private SerializedObject _pathFolderSerializedObject;
         private PathFolder _pathFolder;
+
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -50,18 +52,54 @@ namespace Snorlax.Editor
             SceneView.duringSceneGui += OnSceneGUI;
         }
 
-        private void ActionCreateButtonSearchPath(Rect rect, string pathResult, int index)
+        private void ActionCreateButtonSearchPath(Rect rect, ref SerializedProperty property, int propertyIndex)
         {
             if (GUI.Button(rect, new GUIContent("", "Select folder"), EditorStyles.colorField))
             {
-                var path = EditorUtility.OpenFolderPanel("Select folder output", pathResult, "");
+                string pathResult = property.GetArrayElementAtIndex(propertyIndex).stringValue;
+                string path = EditorUtility.OpenFolderPanel("Select folder output", pathResult, "");
                 if (!string.IsNullOrEmpty(path))
                 {
                     pathResult = path;
-                    if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}"))
+                    string[] subFolders = Directory.GetDirectories(pathResult);
+                    if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}"))
                     {
-                        EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}", pathResult);
+                        EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}", pathResult);
                     }
+
+                    property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
+
+
+                    foreach (string pathSubFolder in subFolders)
+                    {
+                        bool check = false;
+                        int size = property.arraySize;
+                        Debug.Log("size :"  + size);
+                        for (int j = 0; j < size; j++)
+                        {
+                            if (pathSubFolder.Equals(property.GetArrayElementAtIndex(j).stringValue))
+                            {
+                                check = true;
+                            }
+                        }
+
+                        if (!check)
+                        {
+                            if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}"))
+                            {
+                                EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}", pathSubFolder);
+                            }
+                            
+                            property.serializedObject.UpdateIfRequiredOrScript();
+                            property.InsertArrayElementAtIndex(size);
+                            property.serializedObject.ApplyModifiedProperties();
+                        }
+                    }
+                    
+                    EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", property.arraySize);
+
+                    RefreshPathFolder();
+                    RefreshAll();
                 }
 
                 GUI.FocusControl(null);
@@ -69,7 +107,11 @@ namespace Snorlax.Editor
         }
 
 
-        private void UpdateNumberElement(int size) { EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", size); }
+        private void UpdateNumberElement(int size)
+        {
+            EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", size);
+            RefreshAll();
+        }
 
         private void OnDisable()
         {
@@ -100,18 +142,7 @@ namespace Snorlax.Editor
         /// </summary>
         private void RefreshPickObject()
         {
-            int count = EditorPrefs.GetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", 1);
-            if (_pathFolder != null)
-            {
-                _pathFolder.pathFolderPrefabs = new List<string>(count);
-                _pathFolder.pathFolderPrefabs.Clear();
-                for (var i = 0; i < count; i++)
-                {
-                    _pathFolder.pathFolderPrefabs.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                        ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                        : DEFAULT_FOLDER_PREFAB_PATH);
-                }
-            }
+            RefreshPathFolder();
 
             _pickObjects = new List<PickObject>();
 
@@ -139,6 +170,22 @@ namespace Snorlax.Editor
                 {
                     var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
                     _pickObjects.Add(po);
+                }
+            }
+        }
+
+        private void RefreshPathFolder()
+        {
+            int count = EditorPrefs.GetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", 1);
+            if (_pathFolder != null)
+            {
+                _pathFolder.pathFolderPrefabs = new List<string>(count);
+                _pathFolder.pathFolderPrefabs.Clear();
+                for (var i = 0; i < count; i++)
+                {
+                    _pathFolder.pathFolderPrefabs.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+                        ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+                        : DEFAULT_FOLDER_PREFAB_PATH);
                 }
             }
         }
