@@ -3,8 +3,8 @@
 Add 
 
 ```csharp
-"com.snorlax.level-editor": "https://github.com/snorluxe/level-editor.git?path=Assets/_Root/UnityPackage#1.0.10",
-"com.snorlax.common": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.6",
+"com.snorlax.level-editor": "https://github.com/snorluxe/level-editor.git?path=Assets/_Root/UnityPackage#1.0.13",
+"com.snorlax.common": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.8",
 ```
 
 To `Packages/manifest.json`

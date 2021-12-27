@@ -6,13 +6,12 @@ using System.IO;
 using System.Linq;
 using Snorlax.Common;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace Snorlax.Editor
 {
-    public delegate void CreateButtonSearchPathDelegate(Rect rect, ref SerializedProperty property, int index);
-
     public class LevelEditor : EditorWindow
     {
         private Vector3 _prevPosition;
@@ -26,6 +25,7 @@ namespace Snorlax.Editor
         private CustomReorderable _reorderablePath;
         private SerializedObject _pathFolderSerializedObject;
         private PathFolder _pathFolder;
+        private SerializedProperty _pathFolderProperty;
 
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
@@ -46,11 +46,19 @@ namespace Snorlax.Editor
         {
             CreateAsset();
             _pathFolderSerializedObject = new SerializedObject(_pathFolder);
-            _reorderablePath = new CustomReorderable(_pathFolderSerializedObject.FindProperty("pathFolderPrefabs"), UpdateNumberElement, ActionCreateButtonSearchPath);
+            _pathFolderProperty = _pathFolderSerializedObject.FindProperty("pathFolderPrefabs");
+            _reorderablePath = new CustomReorderable(_pathFolderProperty,
+                OnAddCallback,
+                OnRemoveCallback,
+                OnReorderCallbackWithDetails,
+                null,
+                ActionCreateButtonSearchPath);
 
             RefreshPickObject();
             SceneView.duringSceneGui += OnSceneGUI;
         }
+
+        #region reorderable
 
         private void ActionCreateButtonSearchPath(Rect rect, ref SerializedProperty property, int propertyIndex)
         {
@@ -62,17 +70,21 @@ namespace Snorlax.Editor
                 {
                     pathResult = path;
                     string[] subFolders = Directory.GetDirectories(pathResult);
-                    if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}"))
+
+                    if (!_pathFolder.pathFolderPrefabs.Contains(pathResult))
                     {
-                        EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}", pathResult);
+                        if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}")) SavePath(propertyIndex, pathResult);
+                        
+                        property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
                     }
-
-                    property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
-
+                    else
+                    {
+                        Debug.LogWarning("[Level Editor] : folder already exist in the container!");
+                    }
 
                     foreach (string pathSubFolder in subFolders)
                     {
-                        bool check = false;
+                        var check = false;
                         int size = property.arraySize;
                         for (int j = 0; j < size; j++)
                         {
@@ -86,7 +98,7 @@ namespace Snorlax.Editor
                         {
                             if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}"))
                             {
-                                EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}", pathSubFolder);
+                                SavePath(size, pathSubFolder);
                             }
 
                             property.serializedObject.UpdateIfRequiredOrScript();
@@ -105,12 +117,36 @@ namespace Snorlax.Editor
             }
         }
 
-
-        private void UpdateNumberElement(int size)
+        private void OnReorderCallbackWithDetails(ReorderableList list, int oldIndex, int newIndex)
         {
-            EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", size);
+            _pathFolder.pathFolderPrefabs.Swap(oldIndex, newIndex);
+            UtilEditor.SwapEditorPrefs<string>($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{oldIndex}",
+                $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{newIndex}");
             RefreshAll();
         }
+
+        private void ForceSavePath()
+        {
+            for (var j = 0; j < _pathFolder.pathFolderPrefabs.Count; j++)
+            {
+                if (string.IsNullOrEmpty(_pathFolder.pathFolderPrefabs[j])) continue;
+                SavePath(j, _pathFolder.pathFolderPrefabs[j]);
+            }
+        }
+
+        private void SavePath(int index, string value) { EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}", value); }
+
+        private void OnAddCallback(ReorderableList list) { UpdateNumberElement(list); }
+
+        private void OnRemoveCallback(ReorderableList list) { UpdateNumberElement(list); }
+
+        private void UpdateNumberElement(ReorderableList list)
+        {
+            EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", list.count);
+            RefreshAll();
+        }
+
+        #endregion
 
         private void OnDisable()
         {
@@ -131,6 +167,7 @@ namespace Snorlax.Editor
 
         private void RefreshAll()
         {
+            ForceSavePath();
             MapEditorWindowStatics.ClearPreviews();
             RefreshPickObject();
             ClearEditor();
@@ -210,7 +247,7 @@ namespace Snorlax.Editor
             UtilEditor.Section("Map Editor");
 
             _pathFolderSerializedObject?.Update();
-            _reorderablePath?.Draw();
+            _reorderablePath?.DoLayoutList();
             _pathFolderSerializedObject?.ApplyModifiedProperties();
 
             if (GUILayout.Button("Refresh all")) RefreshAll();

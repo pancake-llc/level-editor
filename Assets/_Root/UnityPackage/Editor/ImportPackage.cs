@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 
@@ -21,5 +20,3 @@ public static class ImportPackage
     }
 #endif
 }
-
-#endif

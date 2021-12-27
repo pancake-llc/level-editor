@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.snorlax.common": {
-      "version": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.6",
+      "version": "https://github.com/snorluxe/common.git?path=Assets/_Root",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "728b1c8688b6a007ad86700f2c90856686b0aead"
+      "hash": "a81488d45c411bf9820ca021980768d199516db6"
     },
     "com.unity.2d.animation": {
       "version": "7.0.2",
