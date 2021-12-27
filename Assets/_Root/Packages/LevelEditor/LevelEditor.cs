@@ -74,7 +74,6 @@ namespace Snorlax.Editor
                     {
                         bool check = false;
                         int size = property.arraySize;
-                        Debug.Log("size :"  + size);
                         for (int j = 0; j < size; j++)
                         {
                             if (pathSubFolder.Equals(property.GetArrayElementAtIndex(j).stringValue))
@@ -89,13 +88,13 @@ namespace Snorlax.Editor
                             {
                                 EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}", pathSubFolder);
                             }
-                            
+
                             property.serializedObject.UpdateIfRequiredOrScript();
                             property.InsertArrayElementAtIndex(size);
                             property.serializedObject.ApplyModifiedProperties();
                         }
                     }
-                    
+
                     EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", property.arraySize);
 
                     RefreshPathFolder();
@@ -213,34 +212,6 @@ namespace Snorlax.Editor
             _pathFolderSerializedObject?.Update();
             _reorderablePath?.Draw();
             _pathFolderSerializedObject?.ApplyModifiedProperties();
-            // int newCount = Mathf.Max(0, EditorGUILayout.IntField("Size", _pathPrefabFolders.Count));
-            //
-            // EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", newCount);
-            // while (newCount < _pathPrefabFolders.Count)
-            // {
-            //     _pathPrefabFolders.RemoveAt(_pathPrefabFolders.Count - 1);
-            // }
-            //
-            // while (newCount > _pathPrefabFolders.Count)
-            // {
-            //     _pathPrefabFolders.Add(DEFAULT_FOLDER_PREFAB_PATH);
-            // }
-            //
-            // EditorGUILayout.LabelField("Prefab Folder");
-            // for (var i = 0; i < _pathPrefabFolders.Count; i++)
-            // {
-            //     EditorGUILayout.BeginHorizontal();
-            //     string pathPrefabFolder = _pathPrefabFolders[i];
-            //     string nameFolder = pathPrefabFolder.Split('/').Last();
-            //     string result = nameFolder.Equals("Prefabs") ? "Root" : nameFolder;
-            //     EditorGUILayout.LabelField(result);
-            //     GUI.enabled = false;
-            //     EditorGUILayout.TextField(pathPrefabFolder);
-            //     GUI.enabled = true;
-            //UtilEditor.PickFolderPath(ref pathPrefabFolder, $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}");
-            //     _pathPrefabFolders[i] = pathPrefabFolder;
-            //     EditorGUILayout.EndHorizontal();
-            // }
 
             if (GUILayout.Button("Refresh all")) RefreshAll();
 
