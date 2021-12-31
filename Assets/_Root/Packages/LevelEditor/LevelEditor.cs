@@ -273,7 +273,8 @@ namespace Snorlax.Editor
         {
             var sectionkey = $"{Application.identifier}_MAPEDITOR_FOLDOUT_PICKOBJECT_";
             bool sectionOn = EditorPrefs.GetBool(sectionkey);
-            if (UtilEditor.SubSection("Pick object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
+            GUILayout.Space(12);
+            if (UtilEditor.MiniBoxedSection("Pick object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
             if (!sectionOn) return;
 
             UtilEditor.MiniBoxedSection("Help",
