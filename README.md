@@ -3,7 +3,7 @@
 Add 
 
 ```csharp
-"com.snorlax.level-editor": "https://github.com/snorluxe/level-editor.git?path=Assets/_Root/UnityPackage#1.0.16",
+"com.snorlax.level-editor": "https://github.com/snorluxe/level-editor.git?path=Assets/_Root/UnityPackage#1.0.18",
 "com.snorlax.common": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.11",
 ```
 

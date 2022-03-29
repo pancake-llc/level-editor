@@ -37,7 +37,7 @@ namespace Snorlax.LevelEditor
         public static bool IsImported()
         {
             var imported = EditorPrefs.GetBool(Application.identifier + ".leveleditor", false);
-            var locale = FindClass("LevelEditor", "Snorlax.Editor");
+            var locale = FindClass("LevelEditor", "Snorlax.LevelEditor");
 
             return locale != null || imported;
         }
