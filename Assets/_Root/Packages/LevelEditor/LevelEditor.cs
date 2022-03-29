@@ -5,12 +5,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Snorlax.Common;
+using Snorlax.Editor;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Snorlax.Editor
+namespace Snorlax.LevelEditor
 {
     public class LevelEditor : EditorWindow
     {
@@ -425,7 +426,7 @@ namespace Snorlax.Editor
             {
                 Transform parent = null;
 
-#if UNITY_2020_2_OR_NEWER
+#if UNITY_2021_1_OR_NEWER
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #else
