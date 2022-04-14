@@ -5,13 +5,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Snorlax.Common;
-using Snorlax.Editor;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Snorlax.LevelEditor
+namespace Snorlax.Editor
 {
     public class LevelEditor : EditorWindow
     {
@@ -28,6 +27,12 @@ namespace Snorlax.LevelEditor
         private PathFolder _pathFolder;
         private SerializedProperty _pathFolderProperty;
         private bool _flagFoldoutPath;
+        
+        private GameObject _currentSpawnGameObject;
+        private int _selectedSpawn = 0;
+        private int _childSpawnIndex;
+        private GameObject _attachSpawnGameObject;
+        private string[] _optionsSpawn = new string[3] { "Default", "Child", "Custom" };
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -267,15 +272,45 @@ namespace Snorlax.LevelEditor
 
             if (CheckEscape()) return;
 
+            GuiSettingSpawnObject();
+            
             GuiPickObject();
+        }
+
+        private void GuiSettingSpawnObject()
+        {
+            var sectionkey = $"{Application.identifier}_MAPEDITOR_FOLDOUT_SETTINGSPAWN_";
+            bool sectionOn = EditorPrefs.GetBool(sectionkey);
+            if (UtilEditor.SubSection("Spawn object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
+            if (!sectionOn) return;
+            
+            UtilEditor.MiniBoxedSection("Setting",
+                () =>
+                {
+                    _selectedSpawn = EditorGUILayout.Popup("My Simple Dropdown", _selectedSpawn, _optionsSpawn,GUILayout.Width(400), GUILayout.Height(20));
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        if (_optionsSpawn[_selectedSpawn] == "Default")
+                        {
+                            
+                        }
+                        else if (_optionsSpawn[_selectedSpawn] == "Child")
+                        {
+                            _childSpawnIndex = EditorGUILayout.IntField("Child (X): ", _childSpawnIndex,GUILayout.Width(400), GUILayout.Height(20));
+                        }
+                        else if (_optionsSpawn[_selectedSpawn] == "Custom")
+                        {
+                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                        }
+                    }
+                });
         }
 
         private void GuiPickObject()
         {
             var sectionkey = $"{Application.identifier}_MAPEDITOR_FOLDOUT_PICKOBJECT_";
             bool sectionOn = EditorPrefs.GetBool(sectionkey);
-            GUILayout.Space(12);
-            if (UtilEditor.MiniBoxedSection("Pick object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
+            if (UtilEditor.SubSection("Pick object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
             if (!sectionOn) return;
 
             UtilEditor.MiniBoxedSection("Help",
@@ -426,7 +461,7 @@ namespace Snorlax.LevelEditor
             {
                 Transform parent = null;
 
-#if UNITY_2021_1_OR_NEWER
+#if UNITY_2020_3 || UNITY_2019_4 || UNITY_2021_2 || Unity_2022_1
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #else
@@ -436,7 +471,21 @@ namespace Snorlax.LevelEditor
 
                 if (currentPrefabState != null)
                 {
-                    parent = currentPrefabState.prefabContentsRoot.transform.GetChild(0);
+                    if (_optionsSpawn[_selectedSpawn] == "Default")
+                    {
+                        parent = currentPrefabState.prefabContentsRoot.transform;
+                    }
+                    else if (_optionsSpawn[_selectedSpawn] == "Child")
+                    {
+                        parent = currentPrefabState.prefabContentsRoot.transform.GetChild(_childSpawnIndex);
+                    }
+                    else
+                    {
+                        parent = _attachSpawnGameObject
+                            ? _attachSpawnGameObject.transform
+                            : currentPrefabState.prefabContentsRoot.transform;
+                    }
+                    
                 }
                 else
                 {
