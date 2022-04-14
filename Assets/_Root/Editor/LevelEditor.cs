@@ -4,13 +4,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Snorlax.Common;
+using Pancake.Common;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Snorlax.Editor
+namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
@@ -22,17 +22,17 @@ namespace Snorlax.Editor
         private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
         private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
 
-        private CustomReorderable _reorderablePath;
+        //private CustomReorderable _reorderablePath;
         private SerializedObject _pathFolderSerializedObject;
         private PathFolder _pathFolder;
         private SerializedProperty _pathFolderProperty;
         private bool _flagFoldoutPath;
-        
+
         private GameObject _currentSpawnGameObject;
-        private int _selectedSpawn = 0;
+        private int _selectedSpawn;
         private int _childSpawnIndex;
         private GameObject _attachSpawnGameObject;
-        private string[] _optionsSpawn = new string[3] { "Default", "Child", "Custom" };
+        private readonly string[] _optionsSpawn = {"Default", "Child", "Custom"};
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -53,11 +53,11 @@ namespace Snorlax.Editor
             CreateAsset();
             _pathFolderSerializedObject = new SerializedObject(_pathFolder);
             _pathFolderProperty = _pathFolderSerializedObject.FindProperty("pathFolderPrefabs");
-            _reorderablePath = new CustomReorderable(_pathFolderProperty,
-                OnAddCallback,
-                OnRemoveCallback,
-                OnReorderCallbackWithDetails,
-                ActionCreateButtonSearchPath);
+            // _reorderablePath = new CustomReorderable(_pathFolderProperty,
+            //     OnAddCallback,
+            //     OnRemoveCallback,
+            //     OnReorderCallbackWithDetails,
+            //     ActionCreateButtonSearchPath);
 
             RefreshPickObject();
             SceneView.duringSceneGui += OnSceneGUI;
@@ -217,7 +217,7 @@ namespace Snorlax.Editor
 
                 foreach (var obj in levelObjects)
                 {
-                    var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
+                    var po = new PickObject {pickedObject = obj.gameObject, group = path.Split('/').Last()};
                     _pickObjects.Add(po);
                 }
             }
@@ -254,112 +254,132 @@ namespace Snorlax.Editor
 
         private void OnGUI()
         {
+            Uniform.SpaceTwoLine();
             if (TryClose()) return;
             SceneView.RepaintAll();
+            InternalDrawDropArea();
+            // _flagFoldoutPath = EditorGUILayout.Foldout(_flagFoldoutPath, "", true);
+            // if (_flagFoldoutPath)
+            // {
+            //     _pathFolderSerializedObject?.Update();
+            //     //_reorderablePath?.DoLayoutList();
+            //     _pathFolderSerializedObject?.ApplyModifiedProperties();
+            // }
 
-            UtilEditor.Section("Map Editor");
-
-            _flagFoldoutPath = EditorGUILayout.Foldout(_flagFoldoutPath, "", true);
-            if (_flagFoldoutPath)
-            {
-                _pathFolderSerializedObject?.Update();
-                _reorderablePath?.DoLayoutList();
-                _pathFolderSerializedObject?.ApplyModifiedProperties();
-            }
-
-
-            if (GUILayout.Button("Refresh all")) RefreshAll();
-
+            //Uniform.Button("Refresh all", RefreshAll);
             if (CheckEscape()) return;
-
-            GuiSettingSpawnObject();
-            
-            GuiPickObject();
+            InternalDrawSetting();
+            Uniform.SpaceOneLine();
+            InternalDrawPickupArea();
         }
 
-        private void GuiSettingSpawnObject()
+        private void InternalDrawDropArea()
         {
-            var sectionkey = $"{Application.identifier}_MAPEDITOR_FOLDOUT_SETTINGSPAWN_";
-            bool sectionOn = EditorPrefs.GetBool(sectionkey);
-            if (UtilEditor.SubSection("Spawn object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
-            if (!sectionOn) return;
+            Uniform.DrawUppercaseSection("LEVEL_EDITOR_DROP_AREA", "DROP AREA", DrawDropArea);
             
-            UtilEditor.MiniBoxedSection("Setting",
-                () =>
-                {
-                    _selectedSpawn = EditorGUILayout.Popup("My Simple Dropdown", _selectedSpawn, _optionsSpawn,GUILayout.Width(400), GUILayout.Height(20));
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        if (_optionsSpawn[_selectedSpawn] == "Default")
-                        {
-                            
-                        }
-                        else if (_optionsSpawn[_selectedSpawn] == "Child")
-                        {
-                            _childSpawnIndex = EditorGUILayout.IntField("Child (X): ", _childSpawnIndex,GUILayout.Width(400), GUILayout.Height(20));
-                        }
-                        else if (_optionsSpawn[_selectedSpawn] == "Custom")
-                        {
-                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
-                        }
-                    }
-                });
-        }
-
-        private void GuiPickObject()
-        {
-            var sectionkey = $"{Application.identifier}_MAPEDITOR_FOLDOUT_PICKOBJECT_";
-            bool sectionOn = EditorPrefs.GetBool(sectionkey);
-            if (UtilEditor.SubSection("Pick object")) EditorPrefs.SetBool(sectionkey, sectionOn = !sectionOn);
-            if (!sectionOn) return;
-
-            UtilEditor.MiniBoxedSection("Help",
-                () =>
-                {
-                    var tex = MapEditorWindowStatics.GetPreview(_currentPickObject?.pickedObject);
-                    if (tex)
-                    {
-                        string pickObjectName = _currentPickObject?.pickedObject.name;
-                        if (GUILayout.Button(tex, GUILayout.Height(60)))
-                        {
-                            _currentPickObject = null;
-                        }
-
-                        EditorGUILayout.LabelField($"Selected: {pickObjectName}. Press icon or Escape key to deselect");
-                        EditorGUILayout.LabelField("Shift-click to add");
-                    }
-                    else
-                    {
-                        EditorGUILayout.LabelField("Select an object first");
-                    }
-                });
-
-            _pickObjectScrollPosition = EditorGUILayout.BeginScrollView(_pickObjectScrollPosition);
-
-            var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
-            var key = $"{Application.identifier}_MAPEDITOR_FOLDOUT_GROUP_KEY_";
-            var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
-
-            int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
-
-            for (var i = 0; i < numberGroup; i++)
+            void DrawDropArea()
             {
-                foldouts[i] = EditorPrefs.GetBool($"{key}_{i}", false);
-
-                EditorGUILayout.BeginVertical();
-
-                MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
-
-                EditorGUILayout.EndVertical();
-
-                if (foldouts[i]) DrawInGroup(resultSplitGroupObjects[i]);
+                var @event = Event.current;
+                var area = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
+                switch (@event.type)
+                {
+                    case EventType.DragUpdated:
+                    case EventType.DragPerform:
+                        if (!area.Contains(@event.mousePosition)) return;
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                        if (@event.type == EventType.DragPerform)
+                        {
+                            DragAndDrop.AcceptDrag();
+                            foreach (var objectReference in DragAndDrop.objectReferences)
+                            {
+                                Debug.Log(objectReference.name);
+                            }
+                        }
+                        
+                        break;
+                }
             }
+        }
 
+        private void InternalDrawSetting()
+        {
+            Uniform.DrawUppercaseSection("LEVEL_EDITOR_CONFIG", "SETTING", DrawSetting);
+            
+            void DrawSetting()
+            {
+                _selectedSpawn = EditorGUILayout.Popup("Where Spawn", _selectedSpawn, _optionsSpawn);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    switch (_optionsSpawn[_selectedSpawn])
+                    {
+                        case "Default":
+                            break;
+                        case "Child":
+                            Uniform.SpaceOneLine();
+                            _childSpawnIndex = EditorGUILayout.IntField("Child (X): ", _childSpawnIndex, GUILayout.Width(400), GUILayout.Height(20));
+                            break;
+                        case "Custom":
+                            Uniform.SpaceOneLine();
+                            _attachSpawnGameObject = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void InternalDrawPickupArea()
+        {
+            Uniform.DrawUppercaseSection("LEVEL_EDITOR_PICKUP_AREA", "PICKUP AREA", DrawPickupArea);
+
+            void DrawPickupArea()
+            {
+                var tex = MapEditorWindowStatics.GetPreview(_currentPickObject?.pickedObject);
+                if (tex)
+                {
+                    string pickObjectName = _currentPickObject?.pickedObject.name;
+                    if (GUILayout.Button(tex, GUILayout.Height(60)))
+                    {
+                        _currentPickObject = null;
+                    }
+
+                    EditorGUILayout.LabelField($"Selected: {pickObjectName}. Press Icon Or Escape Key To Deselect");
+                    Uniform.HelpBox("Shift + Click To Add", MessageType.Info);
+                }
+                else
+                {
+                    Uniform.HelpBox("Select An Object First", MessageType.Info);
+                }
+
+
+                _pickObjectScrollPosition = EditorGUILayout.BeginScrollView(_pickObjectScrollPosition);
+
+                var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
+                var key = $"{Application.identifier}_MAPEDITOR_FOLDOUT_GROUP_KEY_";
+                var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
+
+                int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
+
+                for (var i = 0; i < numberGroup; i++)
+                {
+                    foldouts[i] = EditorPrefs.GetBool($"{key}_{i}", false);
+
+                    EditorGUILayout.BeginVertical();
+
+                    MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
+
+                    EditorGUILayout.EndVertical();
+
+                    if (foldouts[i]) DrawInGroup(resultSplitGroupObjects[i]);
+                }
+
+                EditorGUILayout.EndScrollView();
+            }
+            
             void MakeGroupHeaderButton(ref bool foldout, string title, string keyFoldout)
             {
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(15);
-                if (UtilEditor.Button(title, foldout ? (Color?)new Color32(255, 111, 117, 255) : null))
+                if (Uniform.Button(title, color: foldout ? (Color?) new Color32(255, 111, 117, 255) : null))
                 {
                     foldout = !foldout;
                     EditorPrefs.SetBool(keyFoldout, foldout);
@@ -396,7 +416,7 @@ namespace Snorlax.Editor
                         var rect = GUILayoutUtility.GetLastRect().Grown(-3);
                         if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(11, 255, 111, 255));
                         if (tex) GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit);
-                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerCenter });
+                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) {alignment = TextAnchor.LowerCenter});
 
                         counter++;
                         if (counter >= pickObjectsInGroup.Count) break;
@@ -406,9 +426,6 @@ namespace Snorlax.Editor
                     EditorGUILayout.EndHorizontal();
                 }
             }
-
-
-            EditorGUILayout.EndScrollView();
         }
 
         private void OnSceneGUI(SceneView sceneView)
@@ -461,7 +478,7 @@ namespace Snorlax.Editor
             {
                 Transform parent = null;
 
-#if UNITY_2020_3 || UNITY_2019_4 || UNITY_2021_2 || Unity_2022_1
+#if UNITY_2021_1_OR_NEWER
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
                 currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 #else
@@ -481,11 +498,8 @@ namespace Snorlax.Editor
                     }
                     else
                     {
-                        parent = _attachSpawnGameObject
-                            ? _attachSpawnGameObject.transform
-                            : currentPrefabState.prefabContentsRoot.transform;
+                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : currentPrefabState.prefabContentsRoot.transform;
                     }
-                    
                 }
                 else
                 {
@@ -493,7 +507,7 @@ namespace Snorlax.Editor
                     if (levelMap != null) parent = levelMap.transform;
                 }
 
-                var inst = pickObject.pickedObject.Instantiate(parent);
+                var inst = Instantiate(parent);
                 inst.transform.position = worldPos;
 
                 // if (inst.CalculateBounds(out var bounds,
@@ -545,7 +559,7 @@ namespace Snorlax.Editor
 
         private static PreviewGenerator PreviewGenerator =>
             previewGenerator ?? (previewGenerator =
-                new PreviewGenerator { width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit });
+                new PreviewGenerator {width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit});
 
         private static Dictionary<GameObject, Texture2D> previewDict;
 
@@ -602,10 +616,10 @@ namespace Snorlax.Editor
             }
         }
 
-        [MenuItem("Tools/Lance/Level Editor &_l")]
+        [MenuItem("Tools/Snorlax/Level Editor &_3")]
         public static void OpenEditor()
         {
-            var window = EditorWindow.GetWindow<LevelEditor>("Map editor", true, UtilEditor.GetInspectorWindowType());
+            var window = EditorWindow.GetWindow<LevelEditor>("Level Editor", true, UtilEditor.InspectorWindow);
 
             if (window)
             {
@@ -826,8 +840,8 @@ namespace Snorlax.Editor
 
             if (w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE)
             {
-                float downscaleWidthFactor = (float)MAX_TEXTURE_SIZE / w;
-                float downscaleHeightFactor = (float)MAX_TEXTURE_SIZE / h;
+                float downscaleWidthFactor = (float) MAX_TEXTURE_SIZE / w;
+                float downscaleHeightFactor = (float) MAX_TEXTURE_SIZE / h;
                 float downscaleFactor = Mathf.Min(downscaleWidthFactor, downscaleHeightFactor);
 
                 w = Mathf.CeilToInt(w * downscaleFactor);
@@ -893,7 +907,7 @@ namespace Snorlax.Editor
 
             if (w <= 0) w = 512;
             if (h <= 0) h = 512;
-            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) { filterMode = imageFilterMode };
+            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) {filterMode = imageFilterMode};
             tex.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
             tex.Apply(false, false);
 

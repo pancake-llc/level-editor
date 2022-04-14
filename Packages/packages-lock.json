@@ -1,11 +1,11 @@
 {
   "dependencies": {
-    "com.snorlax.common": {
-      "version": "https://github.com/snorluxe/common.git?path=Assets/_Root#1.0.11",
+    "com.pancake.common": {
+      "version": "https://github.com/pancake-llc/common.git?path=Assets/_Root#1.1.2",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "9718371dde329772afdaebdf25ef6d15daffab8f"
+      "hash": "49479e3a77bddea2f030375a91dfea69614a2a67"
     },
     "com.unity.ext.nunit": {
       "version": "1.0.6",

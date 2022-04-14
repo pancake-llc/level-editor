@@ -1,7 +1,10 @@
 {
-    "name": "snorlax@leveleditor.editor",
-    "rootNamespace": "",
-    "references": [],
+    "name": "pancake@level.editor",
+    "rootNamespace": "Pancake.Editor",
+    "references": [
+        "GUID:b7d258362c2b06342bf6220fba18596a",
+        "GUID:686c6ddb7c263be4eb5ab9101c65cb91"
+    ],
     "includePlatforms": [
         "Editor"
     ],

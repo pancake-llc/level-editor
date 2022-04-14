@@ -654,7 +654,7 @@ PlayerSettings:
   webGLDecompressionFallback: 0
   scriptingDefineSymbols:
     0: SNORLAX_LEVEL_EDITOR
-    1: SNORLAX_LEVEL_EDITOR
+    1: 
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend: {}
