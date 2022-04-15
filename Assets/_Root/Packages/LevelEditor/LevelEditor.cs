@@ -17,6 +17,7 @@ namespace Snorlax.Editor
         private Vector3 _prevPosition;
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
+        private GameObject _currentSimulatedPrefab;
         private List<PickObject> _pickObjects;
         private const string COUNT_FOLDER_PREFAB_KEY = "COUNT_FOLDER_PREFAB";
         private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
@@ -40,6 +41,7 @@ namespace Snorlax.Editor
         {
             SceneView.duringSceneGui += GridUpdate;
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
+            
         }
 
         private void CreateAsset()
@@ -287,7 +289,7 @@ namespace Snorlax.Editor
             UtilEditor.MiniBoxedSection("Setting",
                 () =>
                 {
-                    _selectedSpawn = EditorGUILayout.Popup("My Simple Dropdown", _selectedSpawn, _optionsSpawn,GUILayout.Width(400), GUILayout.Height(20));
+                    _selectedSpawn = EditorGUILayout.Popup("Spawn in parent type", _selectedSpawn, _optionsSpawn,GUILayout.Width(400), GUILayout.Height(20));
                     if (EditorGUI.EndChangeCheck())
                     {
                         if (_optionsSpawn[_selectedSpawn] == "Default")
@@ -415,15 +417,17 @@ namespace Snorlax.Editor
         {
             if (TryClose()) return;
             if (CheckEscape()) return;
-
+            if (this == null) SceneView.duringSceneGui -= OnSceneGUI;
             TryFakeRender(sceneView);
+            
+            
         }
 
         private void TryFakeRender(SceneView sceneView)
         {
-            if (!Event.current.shift) return;
             if (_currentPickObject == null || !_currentPickObject.pickedObject) return;
-
+            Event e = Event.current;
+            
             bool state;
             Vector3 mousePosition;
 
@@ -439,15 +443,92 @@ namespace Snorlax.Editor
 
             if (state)
             {
-                UtilEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
                 SceneView.RepaintAll();
-
-                if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                if (sceneView.in2DMode)
                 {
-                    AddPickObject(_currentPickObject, mousePosition);
-                    UtilEditor.SkipEvent();
+                    UtilEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
+
+                    if (e.type == EventType.MouseDown && e.button == 0 && e.shift)
+                    {
+                        AddPickObject(_currentPickObject, mousePosition);
+                        UtilEditor.SkipEvent();
+                    }
+                }
+                else
+                {
+                    Ray ray = HandleUtility.GUIPointToWorldRay (e.mousePosition);
+                    RaycastHit hitInfo;
+                
+                    if (Physics.Raycast(ray, out hitInfo, Mathf.Infinity))
+                    {
+                        if (e.shift)
+                        {
+                            if (!_currentSimulatedPrefab) _currentSimulatedPrefab = Instantiate(_currentPickObject?.pickedObject);
+                            _currentSimulatedPrefab.layer = LayerMask.NameToLayer("Ignore Raycast");
+
+                            var rendererAttach = _currentPickObject?.pickedObject.GetComponent<Renderer>();
+                            var rendererOther = hitInfo.collider.transform.GetComponent<Renderer>();
+                            if (rendererAttach == null || rendererOther == null) return;
+                            _currentSimulatedPrefab.transform.position = GetSpawnPosition(rendererAttach,rendererOther,hitInfo);
+
+                            if (e.type == EventType.MouseDown && e.button == 0)
+                            {
+                                AddPickObject(_currentPickObject, _currentSimulatedPrefab.transform.position);
+                                UtilEditor.SkipEvent();
+                            }
+                        }
+                        else
+                        {
+                            if (_currentSimulatedPrefab) DestroyImmediate(_currentSimulatedPrefab);
+                        }
+                    }
+                    else
+                    {
+                        if (_currentSimulatedPrefab) DestroyImmediate(_currentSimulatedPrefab);
+                    }
                 }
             }
+        }
+        
+        private Vector3 GetSpawnPosition(Renderer rendererAttach, Renderer rendererOther, RaycastHit hitInfo)
+        {
+            var boundsAttach = rendererAttach.bounds;
+            var boundsOther = rendererOther.bounds;
+
+            Vector3 otherPos = hitInfo.collider.gameObject.transform.position;
+            Vector3 pointPos = hitInfo.point;
+
+            int IsSpawnRighSide;
+            if (Mathf.Abs(otherPos.x - pointPos.x) >= boundsOther.size.x / 2)
+            {
+                IsSpawnRighSide = otherPos.x > pointPos.x ? -1 : 1;
+            }
+            else
+            {
+                IsSpawnRighSide = 0;
+            }
+
+            int IsSpawnUpSide;
+            if (Mathf.Abs(otherPos.y - pointPos.y) >= boundsOther.size.y / 2)
+            {
+                IsSpawnUpSide = otherPos.y > pointPos.y ? -1 : 1;
+            }
+            else
+            {
+                IsSpawnUpSide = 0;
+            }
+
+            int IsSpawnForwardSide;
+            if (Mathf.Abs(otherPos.z - pointPos.z) >= boundsOther.size.z / 2)
+            {
+                IsSpawnForwardSide = otherPos.z > pointPos.z ? -1 : 1;
+            }
+            else
+            {
+                IsSpawnForwardSide = 0;
+            }
+        
+            return new Vector3(hitInfo.point.x + (boundsAttach.size.x/2 * IsSpawnRighSide),hitInfo.point.y + (boundsAttach.size.y / 2 * IsSpawnUpSide), hitInfo.point.z + (boundsAttach.size.z / 2 * IsSpawnForwardSide));
         }
 
         /// <summary>
@@ -485,7 +566,6 @@ namespace Snorlax.Editor
                             ? _attachSpawnGameObject.transform
                             : currentPrefabState.prefabContentsRoot.transform;
                     }
-                    
                 }
                 else
                 {
