@@ -466,8 +466,8 @@ namespace Snorlax.Editor
                             if (!_currentSimulatedPrefab) _currentSimulatedPrefab = Instantiate(_currentPickObject?.pickedObject);
                             _currentSimulatedPrefab.layer = LayerMask.NameToLayer("Ignore Raycast");
 
-                            var rendererAttach = _currentPickObject?.pickedObject.GetComponent<Renderer>();
-                            var rendererOther = hitInfo.collider.transform.GetComponent<Renderer>();
+                            var rendererAttach = _currentPickObject?.pickedObject.GetComponentInChildren<Renderer>();
+                            var rendererOther = hitInfo.collider.transform.GetComponentInChildren<Renderer>();
                             if (rendererAttach == null || rendererOther == null) return;
                             _currentSimulatedPrefab.transform.position = GetSpawnPosition(rendererAttach,rendererOther,hitInfo);
 
@@ -575,20 +575,6 @@ namespace Snorlax.Editor
 
                 var inst = pickObject.pickedObject.Instantiate(parent);
                 inst.transform.position = worldPos;
-
-                // if (inst.CalculateBounds(out var bounds,
-                //         Space.World,
-                //         true,
-                //         false,
-                //         false,
-                //         false))
-                // {
-                //     var difference = worldPos.y - bounds.min.y;
-                //
-                //     inst.transform.position += difference * Vector3.up;
-                // }
-                //
-                // inst.transform.position = inst.transform.position.Change(y: 0);
 
                 Undo.RegisterCreatedObjectUndo(inst.gameObject, "Create pick obj");
                 Selection.activeObject = inst;
