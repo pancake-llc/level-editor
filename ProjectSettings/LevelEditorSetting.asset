@@ -1,0 +1,16 @@
+{
+    "pickupObjectWhiteList": [
+        "Assets/_Root/package.json",
+        "Assets/_Root/Editor/LevelEditorSettings.cs",
+        "Assets/_Root/Editor/LevelEditor.cs",
+        "Assets/_Root/Editor",
+        "Assets/_Root/Editor",
+        "Assets/_Root/Editor/LevelEditor.cs",
+        "Assets/_Root/Editor/LevelEditor.cs",
+        "Assets/_Root/Editor",
+        "Assets/_Root"
+    ],
+    "pickupObjectBlackList": [
+        "Assets/_Root"
+    ]
+}

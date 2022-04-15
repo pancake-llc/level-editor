@@ -14,25 +14,40 @@ namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
+        private const string COUNT_FOLDER_PREFAB_KEY = "COUNT_FOLDER_PREFAB";
+        private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
+        private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
+        private const string DEFAULT_LEVEL_SETTING_PATH = "ProjectSettings/LevelEditorSetting.asset";
+        private readonly string[] _optionsSpawn = { "Default", "Child", "Custom" };
+
         private Vector3 _prevPosition;
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
-        private const string COUNT_FOLDER_PREFAB_KEY = "COUNT_FOLDER_PREFAB";
-        private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
-        private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
-
-        //private CustomReorderable _reorderablePath;
         private SerializedObject _pathFolderSerializedObject;
-        private PathFolder _pathFolder;
+        private static LevelEditorSettings levelEditorSettings;
         private SerializedProperty _pathFolderProperty;
         private bool _flagFoldoutPath;
-
         private GameObject _currentSpawnGameObject;
         private int _selectedSpawn;
         private int _childSpawnIndex;
         private GameObject _attachSpawnGameObject;
-        private readonly string[] _optionsSpawn = {"Default", "Child", "Custom"};
+
+        private static LevelEditorSettings LevelEditorSettings
+        {
+            get
+            {
+                if (!DEFAULT_LEVEL_SETTING_PATH.FileExists()) return new LevelEditorSettings();
+                string json = File.ReadAllText(DEFAULT_LEVEL_SETTING_PATH);
+                levelEditorSettings = JsonUtility.FromJson<LevelEditorSettings>(json);
+                return levelEditorSettings;
+            }
+            set
+            {
+                levelEditorSettings = value;
+                SaveLevelEditorSetting();
+            }
+        }
 
         private List<PickObject> PickObjects => _pickObjects ?? (_pickObjects = new List<PickObject>());
 
@@ -42,17 +57,28 @@ namespace Pancake.Editor
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
         }
 
-        private void CreateAsset()
+        private static void SaveLevelEditorSetting()
         {
-            hideFlags = HideFlags.HideAndDontSave;
-            _pathFolder = CreateInstance<PathFolder>();
+            if (!"ProjectSettings".DirectoryExists()) Directory.CreateDirectory("ProjectSettings");
+
+            try
+            {
+                File.WriteAllText(DEFAULT_LEVEL_SETTING_PATH, JsonUtility.ToJson(levelEditorSettings, true));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Unable to save LevelEditorSetting!\n" + e.Message);
+            }
         }
 
         private void OnEnable()
         {
-            CreateAsset();
-            _pathFolderSerializedObject = new SerializedObject(_pathFolder);
-            _pathFolderProperty = _pathFolderSerializedObject.FindProperty("pathFolderPrefabs");
+            {
+                var unused = LevelEditorSettings;
+            }
+
+            //_pathFolderSerializedObject = new SerializedObject(_pathFolder);
+            //_pathFolderProperty = _pathFolderSerializedObject.FindProperty("pathFolderPrefabs");
             // _reorderablePath = new CustomReorderable(_pathFolderProperty,
             //     OnAddCallback,
             //     OnRemoveCallback,
@@ -67,76 +93,76 @@ namespace Pancake.Editor
 
         private void ActionCreateButtonSearchPath(Rect rect, ref SerializedProperty property, int propertyIndex)
         {
-            if (GUI.Button(rect, new GUIContent("", "Select folder"), EditorStyles.colorField))
-            {
-                string pathResult = property.GetArrayElementAtIndex(propertyIndex).stringValue;
-                string path = EditorUtility.OpenFolderPanel("Select folder output", pathResult, "");
-                if (!string.IsNullOrEmpty(path))
-                {
-                    pathResult = path;
-                    string[] subFolders = Directory.GetDirectories(pathResult);
-
-                    if (!_pathFolder.pathFolderPrefabs.Contains(pathResult))
-                    {
-                        if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}")) SavePath(propertyIndex, pathResult);
-
-                        property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[Level Editor] : folder already exist in the container!");
-                    }
-
-                    foreach (string pathSubFolder in subFolders)
-                    {
-                        var check = false;
-                        int size = property.arraySize;
-                        for (int j = 0; j < size; j++)
-                        {
-                            if (pathSubFolder.Equals(property.GetArrayElementAtIndex(j).stringValue))
-                            {
-                                check = true;
-                            }
-                        }
-
-                        if (!check)
-                        {
-                            if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}"))
-                            {
-                                SavePath(size, pathSubFolder);
-                            }
-
-                            property.serializedObject.UpdateIfRequiredOrScript();
-                            property.InsertArrayElementAtIndex(size);
-                            property.serializedObject.ApplyModifiedProperties();
-                        }
-                    }
-
-                    EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", property.arraySize);
-
-                    RefreshPathFolder();
-                    RefreshAll();
-                }
-
-                GUI.FocusControl(null);
-            }
+            // if (GUI.Button(rect, new GUIContent("", "Select folder"), EditorStyles.colorField))
+            // {
+            //     string pathResult = property.GetArrayElementAtIndex(propertyIndex).stringValue;
+            //     string path = EditorUtility.OpenFolderPanel("Select folder output", pathResult, "");
+            //     if (!string.IsNullOrEmpty(path))
+            //     {
+            //         pathResult = path;
+            //         string[] subFolders = Directory.GetDirectories(pathResult);
+            //
+            //         if (!_pathFolder.pathFolderPrefabs.Contains(pathResult))
+            //         {
+            //             if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{propertyIndex}")) SavePath(propertyIndex, pathResult);
+            //
+            //             property.GetArrayElementAtIndex(propertyIndex).stringValue = path;
+            //         }
+            //         else
+            //         {
+            //             Debug.LogWarning("[Level Editor] : folder already exist in the container!");
+            //         }
+            //
+            //         foreach (string pathSubFolder in subFolders)
+            //         {
+            //             var check = false;
+            //             int size = property.arraySize;
+            //             for (int j = 0; j < size; j++)
+            //             {
+            //                 if (pathSubFolder.Equals(property.GetArrayElementAtIndex(j).stringValue))
+            //                 {
+            //                     check = true;
+            //                 }
+            //             }
+            //
+            //             if (!check)
+            //             {
+            //                 if (!string.IsNullOrEmpty($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{size}"))
+            //                 {
+            //                     SavePath(size, pathSubFolder);
+            //                 }
+            //
+            //                 property.serializedObject.UpdateIfRequiredOrScript();
+            //                 property.InsertArrayElementAtIndex(size);
+            //                 property.serializedObject.ApplyModifiedProperties();
+            //             }
+            //         }
+            //
+            //         EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", property.arraySize);
+            //
+            //         RefreshPathFolder();
+            //         RefreshAll();
+            //     }
+            //
+            //     GUI.FocusControl(null);
+            // }
         }
 
         private void OnReorderCallbackWithDetails(ReorderableList list, int oldIndex, int newIndex)
         {
-            _pathFolder.pathFolderPrefabs.Swap(oldIndex, newIndex);
-            UtilEditor.SwapEditorPrefs<string>($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{oldIndex}",
-                $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{newIndex}");
-            RefreshAll();
+            // _pathFolder.pathFolderPrefabs.Swap(oldIndex, newIndex);
+            // UtilEditor.SwapEditorPrefs<string>($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{oldIndex}",
+            //     $"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{newIndex}");
+            // RefreshAll();
         }
 
         private void ForceSavePath()
         {
-            for (var j = 0; j < _pathFolder.pathFolderPrefabs.Count; j++)
-            {
-                if (string.IsNullOrEmpty(_pathFolder.pathFolderPrefabs[j])) continue;
-                SavePath(j, _pathFolder.pathFolderPrefabs[j]);
-            }
+            // for (var j = 0; j < _pathFolder.pathFolderPrefabs.Count; j++)
+            // {
+            //     if (string.IsNullOrEmpty(_pathFolder.pathFolderPrefabs[j])) continue;
+            //     SavePath(j, _pathFolder.pathFolderPrefabs[j]);
+            // }
         }
 
         private void SavePath(int index, string value) { EditorPrefs.SetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}", value); }
@@ -187,10 +213,10 @@ namespace Pancake.Editor
 
             _pickObjects = new List<PickObject>();
 
-            for (int i = 0; i < _pathFolder.pathFolderPrefabs.ToList().Count; i++)
-            {
-                MakeGroupPrefab(i, _pathFolder.pathFolderPrefabs[i], ref _pathFolder.pathFolderPrefabs);
-            }
+            // for (int i = 0; i < _pathFolder.pathFolderPrefabs.ToList().Count; i++)
+            // {
+            //     MakeGroupPrefab(i, _pathFolder.pathFolderPrefabs[i], ref _pathFolder.pathFolderPrefabs);
+            // }
 
             void MakeGroupPrefab(int index, string path, ref List<string> paths)
             {
@@ -217,7 +243,7 @@ namespace Pancake.Editor
 
                 foreach (var obj in levelObjects)
                 {
-                    var po = new PickObject {pickedObject = obj.gameObject, group = path.Split('/').Last()};
+                    var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
                     _pickObjects.Add(po);
                 }
             }
@@ -226,17 +252,17 @@ namespace Pancake.Editor
         private void RefreshPathFolder()
         {
             int count = EditorPrefs.GetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", 1);
-            if (_pathFolder != null)
-            {
-                _pathFolder.pathFolderPrefabs = new List<string>(count);
-                _pathFolder.pathFolderPrefabs.Clear();
-                for (var i = 0; i < count; i++)
-                {
-                    _pathFolder.pathFolderPrefabs.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                        ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
-                        : DEFAULT_FOLDER_PREFAB_PATH);
-                }
-            }
+            // if (_pathFolder != null)
+            // {
+            //     _pathFolder.pathFolderPrefabs = new List<string>(count);
+            //     _pathFolder.pathFolderPrefabs.Clear();
+            //     for (var i = 0; i < count; i++)
+            //     {
+            //         _pathFolder.pathFolderPrefabs.Add(EditorPrefs.HasKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+            //             ? EditorPrefs.GetString($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{i}")
+            //             : DEFAULT_FOLDER_PREFAB_PATH);
+            //     }
+            // }
         }
 
         private bool CheckEscape()
@@ -256,8 +282,11 @@ namespace Pancake.Editor
         {
             Uniform.SpaceTwoLine();
             if (TryClose()) return;
+            if (CheckEscape()) return;
             SceneView.RepaintAll();
             InternalDrawDropArea();
+            Uniform.SpaceOneLine();
+
             // _flagFoldoutPath = EditorGUILayout.Foldout(_flagFoldoutPath, "", true);
             // if (_flagFoldoutPath)
             // {
@@ -267,7 +296,7 @@ namespace Pancake.Editor
             // }
 
             //Uniform.Button("Refresh all", RefreshAll);
-            if (CheckEscape()) return;
+
             InternalDrawSetting();
             Uniform.SpaceOneLine();
             InternalDrawPickupArea();
@@ -276,35 +305,95 @@ namespace Pancake.Editor
         private void InternalDrawDropArea()
         {
             Uniform.DrawUppercaseSection("LEVEL_EDITOR_DROP_AREA", "DROP AREA", DrawDropArea);
-            
+
             void DrawDropArea()
             {
                 var @event = Event.current;
-                var area = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
-                switch (@event.type)
+                Uniform.Horizontal(() =>
                 {
-                    case EventType.DragUpdated:
-                    case EventType.DragPerform:
-                        if (!area.Contains(@event.mousePosition)) return;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
-                        if (@event.type == EventType.DragPerform)
-                        {
-                            DragAndDrop.AcceptDrag();
-                            foreach (var objectReference in DragAndDrop.objectReferences)
+                    var whiteArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
+                    var blackArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
+                    GUI.backgroundColor = new Color(0f, 0.83f, 1f);
+                    GUI.Box(whiteArea, "WHITE LIST", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.backgroundColor = Color.white;
+                    GUI.backgroundColor = new Color(1f, 0.13f, 0f);
+                    GUI.Box(blackArea, "BLACK LIST", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.backgroundColor = Color.white;
+                    switch (@event.type)
+                    {
+                        case EventType.DragUpdated:
+                        case EventType.DragPerform:
+                            if (whiteArea.Contains(@event.mousePosition))
                             {
-                                Debug.Log(objectReference.name);
+                                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                                if (@event.type == EventType.DragPerform)
+                                {
+                                    DragAndDrop.AcceptDrag();
+                                    foreach (string path in DragAndDrop.paths)
+                                    {
+                                        LevelEditorSettings.pickupObjectWhiteList.Add(path);
+                                        
+                                        Debug.Log("white list :" + Directory.GetParent(path)?.FullName);
+                                    }
+                                }
                             }
-                        }
+                            else if (blackArea.Contains(@event.mousePosition))
+                            {
+                                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                                if (@event.type == EventType.DragPerform)
+                                {
+                                    DragAndDrop.AcceptDrag();
+                                    foreach (string path in DragAndDrop.paths)
+                                    {
+                                        LevelEditorSettings.pickupObjectBlackList.Add(path);
+                                        Debug.Log("black list :" + path);
+                                    }
+                                }
+                            }
+
+
+                            SaveLevelEditorSetting();
+                            break;
+                    }
+                });
+            }
+
+            void AddToWhiteList(string path)
+            {
+                
+            }
+
+            void AddToBlackList(string path)
+            {
+                
+            }
+
+            bool IsDirectory(string path) => Directory.Exists(path);
+            bool IsFile(string path) => File.Exists(path);
+
+            bool IsPathAlreadyInWhiteList(string path)
+            {
+                var lowestFolder = path;
+                if (IsFile(path))
+                {
+                    if (!LevelEditorSettings.pickupObjectWhiteList.Contains(path))
+                    {
                         
-                        break;
+                    }
+                    lowestFolder = Directory.GetParent(path)?.FullName;
                 }
+                
+                
+                
+
+                return false;
             }
         }
 
         private void InternalDrawSetting()
         {
             Uniform.DrawUppercaseSection("LEVEL_EDITOR_CONFIG", "SETTING", DrawSetting);
-            
+
             void DrawSetting()
             {
                 _selectedSpawn = EditorGUILayout.Popup("Where Spawn", _selectedSpawn, _optionsSpawn);
@@ -320,7 +409,7 @@ namespace Pancake.Editor
                             break;
                         case "Custom":
                             Uniform.SpaceOneLine();
-                            _attachSpawnGameObject = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
                             break;
                     }
                 }
@@ -355,31 +444,31 @@ namespace Pancake.Editor
 
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
                 var key = $"{Application.identifier}_MAPEDITOR_FOLDOUT_GROUP_KEY_";
-                var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
-
-                int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
-
-                for (var i = 0; i < numberGroup; i++)
-                {
-                    foldouts[i] = EditorPrefs.GetBool($"{key}_{i}", false);
-
-                    EditorGUILayout.BeginVertical();
-
-                    MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
-
-                    EditorGUILayout.EndVertical();
-
-                    if (foldouts[i]) DrawInGroup(resultSplitGroupObjects[i]);
-                }
+                // var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
+                //
+                // int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
+                //
+                // for (var i = 0; i < numberGroup; i++)
+                // {
+                //     foldouts[i] = EditorPrefs.GetBool($"{key}_{i}", false);
+                //
+                //     EditorGUILayout.BeginVertical();
+                //
+                //    // MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
+                //
+                //     EditorGUILayout.EndVertical();
+                //
+                //     if (foldouts[i]) DrawInGroup(resultSplitGroupObjects[i]);
+                // }
 
                 EditorGUILayout.EndScrollView();
             }
-            
+
             void MakeGroupHeaderButton(ref bool foldout, string title, string keyFoldout)
             {
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(15);
-                if (Uniform.Button(title, color: foldout ? (Color?) new Color32(255, 111, 117, 255) : null))
+                if (Uniform.Button(title, color: foldout ? (Color?)new Color32(255, 111, 117, 255) : null))
                 {
                     foldout = !foldout;
                     EditorPrefs.SetBool(keyFoldout, foldout);
@@ -416,7 +505,7 @@ namespace Pancake.Editor
                         var rect = GUILayoutUtility.GetLastRect().Grown(-3);
                         if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(11, 255, 111, 255));
                         if (tex) GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit);
-                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) {alignment = TextAnchor.LowerCenter});
+                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerCenter });
 
                         counter++;
                         if (counter >= pickObjectsInGroup.Count) break;
@@ -559,7 +648,7 @@ namespace Pancake.Editor
 
         private static PreviewGenerator PreviewGenerator =>
             previewGenerator ?? (previewGenerator =
-                new PreviewGenerator {width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit});
+                new PreviewGenerator { width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit });
 
         private static Dictionary<GameObject, Texture2D> previewDict;
 
@@ -840,8 +929,8 @@ namespace Pancake.Editor
 
             if (w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE)
             {
-                float downscaleWidthFactor = (float) MAX_TEXTURE_SIZE / w;
-                float downscaleHeightFactor = (float) MAX_TEXTURE_SIZE / h;
+                float downscaleWidthFactor = (float)MAX_TEXTURE_SIZE / w;
+                float downscaleHeightFactor = (float)MAX_TEXTURE_SIZE / h;
                 float downscaleFactor = Mathf.Min(downscaleWidthFactor, downscaleHeightFactor);
 
                 w = Mathf.CeilToInt(w * downscaleFactor);
@@ -907,7 +996,7 @@ namespace Pancake.Editor
 
             if (w <= 0) w = 512;
             if (h <= 0) h = 512;
-            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) {filterMode = imageFilterMode};
+            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) { filterMode = imageFilterMode };
             tex.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
             tex.Apply(false, false);
 
@@ -922,17 +1011,6 @@ namespace Pancake.Editor
         void OnPreviewCapturing(PreviewGenerator preview);
 
         void OnPreviewCaptured(PreviewGenerator preview);
-    }
-
-    public class PickObject
-    {
-        public string group;
-        public GameObject pickedObject;
-    }
-
-    public class PathFolder : ScriptableObject
-    {
-        public List<string> pathFolderPrefabs = new List<string>();
     }
 }
 #endif
