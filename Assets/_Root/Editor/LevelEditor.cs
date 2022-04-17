@@ -338,6 +338,7 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
+                                        ValidateCross(path, ref LevelEditorSettings.pickupObjectBlackList);
                                         AddToWhiteList(path);
                                     }
 
@@ -353,6 +354,7 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
+                                        ValidateCross(path, ref LevelEditorSettings.pickupObjectWhiteList);
                                         AddToBlackList(path);
                                     }
 
@@ -360,7 +362,6 @@ namespace Pancake.Editor
                                     SaveLevelEditorSetting();
                                 }
                             }
-
 
                             SaveLevelEditorSetting();
                             break;
@@ -393,14 +394,21 @@ namespace Pancake.Editor
                 string dataPath = Application.dataPath.Replace('/', '\\');
                 foreach (var p in allParent)
                 {
-                    string relativePath = p.FullName;
-                    if (relativePath.StartsWith(dataPath)) relativePath = "Assets" + relativePath.Substring(Application.dataPath.Length);
-                    relativePath = relativePath.Replace('\\', '/');
+                    if (!EqualPath(p, dataPath, source)) return false;
+                }
 
-                    foreach (string s in source)
-                    {
-                        if (s.Equals(relativePath)) return false;
-                    }
+                return true;
+            }
+
+            bool EqualPath(FileSystemInfo p, string dataPath, List<string> source)
+            {
+                string relativePath = p.FullName;
+                if (relativePath.StartsWith(dataPath)) relativePath = "Assets" + relativePath.Substring(Application.dataPath.Length);
+                relativePath = relativePath.Replace('\\', '/');
+
+                foreach (string s in source)
+                {
+                    if (s.Equals(relativePath)) return false;
                 }
 
                 return true;
@@ -413,22 +421,18 @@ namespace Pancake.Editor
                 var valueRemove = new List<string>();
                 var unique = arr.Distinct().ToList();
                 string dataPath = Application.dataPath.Replace('/', '\\');
-                for (int i = 0; i < unique.Count; i++)
+                foreach (string u in unique)
                 {
-                    var info = new DirectoryInfo(unique[i]);
-                    for (int j = unique.Count - 1; j >= 0; j--)
+                    var info = new DirectoryInfo(u);
+                    var allParent = new List<DirectoryInfo>();
+                    GetAllParentDirectories(info, ref allParent);
+                    allParent.Remove(info);
+                    foreach (var p in allParent)
                     {
-                        if (info.Parent != null)
-                        {
-                            string parentPath = info.Parent.FullName;
-                            if (parentPath.StartsWith(dataPath)) parentPath = "Assets" + parentPath.Substring(Application.dataPath.Length);
-                            parentPath = parentPath.Replace('\\', '/');
-                            if (unique[j].Equals(parentPath))
-                            {
-                                valueRemove.Add(unique[i]);
-                                break;
-                            }
-                        }
+                        if (EqualPath(p, dataPath, unique)) continue;
+                        
+                        valueRemove.Add(u);
+                        break;
                     }
                 }
 
@@ -436,9 +440,16 @@ namespace Pancake.Editor
                 {
                     unique.Remove(i);
                 }
-
-
+                
                 source = unique;
+            }
+
+            void ValidateCross(string path, ref List<string> target)
+            {
+                foreach (string t in target.ToList())
+                {
+                    if (path.Equals(t)) target.Remove(t);
+                }
             }
 
             void GetAllParentDirectories(DirectoryInfo directoryToScan, ref List<DirectoryInfo> directories)
