@@ -18,14 +18,14 @@ namespace Pancake.Editor
         private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
         private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
         private const string DEFAULT_LEVEL_SETTING_PATH = "ProjectSettings/LevelEditorSetting.asset";
-        private readonly string[] _optionsSpawn = { "Default", "Child", "Custom" };
+        private readonly string[] _optionsSpawn = {"Default", "Child", "Custom"};
 
         private Vector3 _prevPosition;
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
         private SerializedObject _pathFolderSerializedObject;
-        private static LevelEditorSettings levelEditorSettings;
+
         private SerializedProperty _pathFolderProperty;
         private bool _flagFoldoutPath;
         private GameObject _currentSpawnGameObject;
@@ -33,13 +33,14 @@ namespace Pancake.Editor
         private int _childSpawnIndex;
         private GameObject _attachSpawnGameObject;
 
+        private static LevelEditorSettings levelEditorSettings;
+
         private static LevelEditorSettings LevelEditorSettings
         {
             get
             {
-                if (!DEFAULT_LEVEL_SETTING_PATH.FileExists()) return new LevelEditorSettings();
-                string json = File.ReadAllText(DEFAULT_LEVEL_SETTING_PATH);
-                levelEditorSettings = JsonUtility.FromJson<LevelEditorSettings>(json);
+                if (levelEditorSettings == null) LoadLevelEditorSetting();
+
                 return levelEditorSettings;
             }
             set
@@ -55,6 +56,14 @@ namespace Pancake.Editor
         {
             SceneView.duringSceneGui += GridUpdate;
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
+        }
+
+        public static void LoadLevelEditorSetting()
+        {
+            levelEditorSettings = new LevelEditorSettings();
+            if (!DEFAULT_LEVEL_SETTING_PATH.FileExists()) return;
+            string json = File.ReadAllText(DEFAULT_LEVEL_SETTING_PATH);
+            levelEditorSettings = JsonUtility.FromJson<LevelEditorSettings>(json);
         }
 
         private static void SaveLevelEditorSetting()
@@ -73,9 +82,7 @@ namespace Pancake.Editor
 
         private void OnEnable()
         {
-            {
-                var unused = LevelEditorSettings;
-            }
+            LoadLevelEditorSetting();
 
             //_pathFolderSerializedObject = new SerializedObject(_pathFolder);
             //_pathFolderProperty = _pathFolderSerializedObject.FindProperty("pathFolderPrefabs");
@@ -243,7 +250,7 @@ namespace Pancake.Editor
 
                 foreach (var obj in levelObjects)
                 {
-                    var po = new PickObject { pickedObject = obj.gameObject, group = path.Split('/').Last() };
+                    var po = new PickObject {pickedObject = obj.gameObject, group = path.Split('/').Last()};
                     _pickObjects.Add(po);
                 }
             }
@@ -314,10 +321,10 @@ namespace Pancake.Editor
                     var whiteArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
                     var blackArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
                     GUI.backgroundColor = new Color(0f, 0.83f, 1f);
-                    GUI.Box(whiteArea, "WHITE LIST", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.Box(whiteArea, "WHITE LIST", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     GUI.backgroundColor = new Color(1f, 0.13f, 0f);
-                    GUI.Box(blackArea, "BLACK LIST", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.Box(blackArea, "BLACK LIST", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     switch (@event.type)
                     {
@@ -331,10 +338,11 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        LevelEditorSettings.pickupObjectWhiteList.Add(path);
-                                        
-                                        Debug.Log("white list :" + Directory.GetParent(path)?.FullName);
+                                        AddToWhiteList(path);
                                     }
+
+                                    ReduceScopeDirectory(ref LevelEditorSettings.pickupObjectWhiteList);
+                                    SaveLevelEditorSetting();
                                 }
                             }
                             else if (blackArea.Contains(@event.mousePosition))
@@ -345,9 +353,11 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        LevelEditorSettings.pickupObjectBlackList.Add(path);
-                                        Debug.Log("black list :" + path);
+                                        AddToBlackList(path);
                                     }
+
+                                    ReduceScopeDirectory(ref LevelEditorSettings.pickupObjectBlackList);
+                                    SaveLevelEditorSetting();
                                 }
                             }
 
@@ -360,33 +370,86 @@ namespace Pancake.Editor
 
             void AddToWhiteList(string path)
             {
-                
+                if (IsCanAddToCollection(path, LevelEditorSettings.pickupObjectWhiteList)) LevelEditorSettings.pickupObjectWhiteList.Add(path);
+                LevelEditorSettings.pickupObjectWhiteList = LevelEditorSettings.pickupObjectWhiteList.Distinct().ToList(); //unique
             }
 
             void AddToBlackList(string path)
             {
-                
+                if (IsCanAddToCollection(path, LevelEditorSettings.pickupObjectBlackList)) LevelEditorSettings.pickupObjectBlackList.Add(path);
+                LevelEditorSettings.pickupObjectBlackList = LevelEditorSettings.pickupObjectBlackList.Distinct().ToList(); //unique
             }
 
             bool IsDirectory(string path) => Directory.Exists(path);
             bool IsFile(string path) => File.Exists(path);
 
-            bool IsPathAlreadyInWhiteList(string path)
+            bool IsCanAddToCollection(string path, List<string> source)
             {
-                var lowestFolder = path;
-                if (IsFile(path))
-                {
-                    if (!LevelEditorSettings.pickupObjectWhiteList.Contains(path))
-                    {
-                        
-                    }
-                    lowestFolder = Directory.GetParent(path)?.FullName;
-                }
-                
-                
-                
+                if (source.Count == 0) return true;
+                var info = new DirectoryInfo(path);
+                var allParent = new List<DirectoryInfo>();
+                GetAllParentDirectories(info, ref allParent);
 
-                return false;
+                string dataPath = Application.dataPath.Replace('/', '\\');
+                foreach (var p in allParent)
+                {
+                    string relativePath = p.FullName;
+                    if (relativePath.StartsWith(dataPath)) relativePath = "Assets" + relativePath.Substring(Application.dataPath.Length);
+                    relativePath = relativePath.Replace('\\', '/');
+
+                    foreach (string s in source)
+                    {
+                        if (s.Equals(relativePath)) return false;
+                    }
+                }
+
+                return true;
+            }
+
+            void ReduceScopeDirectory(ref List<string> source)
+            {
+                var arr = new string[source.Count];
+                source.CopyTo(arr);
+                var valueRemove = new List<string>();
+                var unique = arr.Distinct().ToList();
+                string dataPath = Application.dataPath.Replace('/', '\\');
+                for (int i = 0; i < unique.Count; i++)
+                {
+                    var info = new DirectoryInfo(unique[i]);
+                    for (int j = unique.Count - 1; j >= 0; j--)
+                    {
+                        if (info.Parent != null)
+                        {
+                            string parentPath = info.Parent.FullName;
+                            if (parentPath.StartsWith(dataPath)) parentPath = "Assets" + parentPath.Substring(Application.dataPath.Length);
+                            parentPath = parentPath.Replace('\\', '/');
+                            if (unique[j].Equals(parentPath))
+                            {
+                                valueRemove.Add(unique[i]);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                foreach (string i in valueRemove)
+                {
+                    unique.Remove(i);
+                }
+
+
+                source = unique;
+            }
+
+            void GetAllParentDirectories(DirectoryInfo directoryToScan, ref List<DirectoryInfo> directories)
+            {
+                while (true)
+                {
+                    if (directoryToScan == null || directoryToScan.Name == directoryToScan.Root.Name || !directoryToScan.FullName.Contains("Assets")) return;
+
+                    directories.Add(directoryToScan);
+                    directoryToScan = directoryToScan.Parent;
+                }
             }
         }
 
@@ -409,7 +472,7 @@ namespace Pancake.Editor
                             break;
                         case "Custom":
                             Uniform.SpaceOneLine();
-                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                            _attachSpawnGameObject = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
                             break;
                     }
                 }
@@ -468,7 +531,7 @@ namespace Pancake.Editor
             {
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(15);
-                if (Uniform.Button(title, color: foldout ? (Color?)new Color32(255, 111, 117, 255) : null))
+                if (Uniform.Button(title, color: foldout ? (Color?) new Color32(255, 111, 117, 255) : null))
                 {
                     foldout = !foldout;
                     EditorPrefs.SetBool(keyFoldout, foldout);
@@ -505,7 +568,7 @@ namespace Pancake.Editor
                         var rect = GUILayoutUtility.GetLastRect().Grown(-3);
                         if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(11, 255, 111, 255));
                         if (tex) GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit);
-                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerCenter });
+                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) {alignment = TextAnchor.LowerCenter});
 
                         counter++;
                         if (counter >= pickObjectsInGroup.Count) break;
@@ -648,7 +711,7 @@ namespace Pancake.Editor
 
         private static PreviewGenerator PreviewGenerator =>
             previewGenerator ?? (previewGenerator =
-                new PreviewGenerator { width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit });
+                new PreviewGenerator {width = 512, height = 512, transparentBackground = true, sizingType = PreviewGenerator.ImageSizeType.Fit});
 
         private static Dictionary<GameObject, Texture2D> previewDict;
 
@@ -929,8 +992,8 @@ namespace Pancake.Editor
 
             if (w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE)
             {
-                float downscaleWidthFactor = (float)MAX_TEXTURE_SIZE / w;
-                float downscaleHeightFactor = (float)MAX_TEXTURE_SIZE / h;
+                float downscaleWidthFactor = (float) MAX_TEXTURE_SIZE / w;
+                float downscaleHeightFactor = (float) MAX_TEXTURE_SIZE / h;
                 float downscaleFactor = Mathf.Min(downscaleWidthFactor, downscaleHeightFactor);
 
                 w = Mathf.CeilToInt(w * downscaleFactor);
@@ -996,7 +1059,7 @@ namespace Pancake.Editor
 
             if (w <= 0) w = 512;
             if (h <= 0) h = 512;
-            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) { filterMode = imageFilterMode };
+            var tex = new Texture2D(w, h, transparentBackground ? TextureFormat.RGBA32 : TextureFormat.RGB24, false) {filterMode = imageFilterMode};
             tex.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
             tex.Apply(false, false);
 
