@@ -10,9 +10,6 @@ namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
-        private const string COUNT_FOLDER_PREFAB_KEY = "COUNT_FOLDER_PREFAB";
-        private const string FOLDER_PREFAB_PATH_KEY = "FOLDER_PREFAB_PATH";
-        private const string DEFAULT_FOLDER_PREFAB_PATH = "_Root/Prefabs";
         private const string DEFAULT_LEVEL_SETTING_PATH = "ProjectSettings/LevelEditorSetting.asset";
         private readonly string[] _optionsSpawn = {"Default", "Child", "Custom"};
 
@@ -121,37 +118,33 @@ namespace Pancake.Editor
         {
             _pickObjects = new List<PickObject>();
 
-            // for (int i = 0; i < _pathFolder.pathFolderPrefabs.ToList().Count; i++)
-            // {
-            //     MakeGroupPrefab(i, _pathFolder.pathFolderPrefabs[i], ref _pathFolder.pathFolderPrefabs);
-            // }
-
-            void MakeGroupPrefab(int index, string path, ref List<string> paths)
+            foreach (string whitepath in LevelEditorSettings.pickupObjectWhiteList)
             {
-                string pathLocal = path;
-                if (path.Equals(DEFAULT_FOLDER_PREFAB_PATH))
-                {
-                    pathLocal = pathLocal.Insert(0, $"{Application.dataPath}/");
-                }
+                MakeGroupPrefab(whitepath);
+            }
 
-                if (!Directory.Exists(pathLocal) || !pathLocal.Contains(Application.dataPath))
+            void MakeGroupPrefab(string path)
+            {
+                if (!Directory.Exists(path) && !File.Exists(path) || !path.StartsWith("Assets"))
                 {
                     Debug.LogWarning("[Level Editor]: Can not found folder '" + path + "'");
                     return;
                 }
 
-                var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "")).Where(lo => !(lo is null)).ToList();
-                if (levelObjects.Count == 0)
-                {
-                    paths.Remove(path);
-                    EditorPrefs.DeleteKey($"{Application.identifier}_{FOLDER_PREFAB_PATH_KEY}_{index}");
-                    EditorPrefs.SetInt($"{Application.identifier}_{COUNT_FOLDER_PREFAB_KEY}", paths.Count);
-                    return;
-                }
+                var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "").Replace("Assets/", ""))
+                    .Where(lo => !(lo is null))
+                    .ToList();
 
                 foreach (var obj in levelObjects)
                 {
-                    var po = new PickObject {pickedObject = obj.gameObject, group = path.Split('/').Last()};
+                    string group = path.Split('/').Last();
+                    if (File.Exists(path))
+                    {
+                        var pathInfo = new DirectoryInfo(path);
+                        if (pathInfo.Parent != null) group = pathInfo.Parent.Name;
+                    }
+
+                    var po = new PickObject {pickedObject = obj.gameObject, group = group};
                     _pickObjects.Add(po);
                 }
             }
@@ -178,17 +171,7 @@ namespace Pancake.Editor
             SceneView.RepaintAll();
             InternalDrawDropArea();
             Uniform.SpaceOneLine();
-
-            // _flagFoldoutPath = EditorGUILayout.Foldout(_flagFoldoutPath, "", true);
-            // if (_flagFoldoutPath)
-            // {
-            //     _pathFolderSerializedObject?.Update();
-            //     //_reorderablePath?.DoLayoutList();
-            //     _pathFolderSerializedObject?.ApplyModifiedProperties();
-            // }
-
             //Uniform.Button("Refresh all", RefreshAll);
-
             InternalDrawSetting();
             Uniform.SpaceOneLine();
             InternalDrawPickupArea();
@@ -463,7 +446,7 @@ namespace Pancake.Editor
                 if (tex)
                 {
                     string pickObjectName = _currentPickObject?.pickedObject.name;
-                    if (GUILayout.Button(tex, GUILayout.Height(60)))
+                    if (GUILayout.Button(tex, GUILayout.Height(50)))
                     {
                         _currentPickObject = null;
                     }
@@ -475,44 +458,12 @@ namespace Pancake.Editor
                 {
                     Uniform.HelpBox("Select An Object First", MessageType.Info);
                 }
-
-
-                _pickObjectScrollPosition = EditorGUILayout.BeginScrollView(_pickObjectScrollPosition);
-
+                
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
-                var key = $"{Application.identifier}_MAPEDITOR_FOLDOUT_GROUP_KEY_";
-                // var foldouts = new bool[_pathFolder.pathFolderPrefabs.Count];
-                //
-                // int numberGroup = Math.Min(foldouts.Length, resultSplitGroupObjects.Count);
-                //
-                // for (var i = 0; i < numberGroup; i++)
-                // {
-                //     foldouts[i] = EditorPrefs.GetBool($"{key}_{i}", false);
-                //
-                //     EditorGUILayout.BeginVertical();
-                //
-                //    // MakeGroupHeaderButton(ref foldouts[i], _pathFolder.pathFolderPrefabs[i].Split('/').Last(), $"{key}_{i}");
-                //
-                //     EditorGUILayout.EndVertical();
-                //
-                //     if (foldouts[i]) DrawInGroup(resultSplitGroupObjects[i]);
-                // }
-
-                EditorGUILayout.EndScrollView();
-            }
-
-            void MakeGroupHeaderButton(ref bool foldout, string title, string keyFoldout)
-            {
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Space(15);
-                if (Uniform.Button(title, color: foldout ? (Color?) new Color32(255, 111, 117, 255) : null))
+                foreach (var splitGroupObject in resultSplitGroupObjects)
                 {
-                    foldout = !foldout;
-                    EditorPrefs.SetBool(keyFoldout, foldout);
+                    Uniform.DrawUppercaseSection("LEVEL_EDITOR_PICKUP_AREA_CHILD", splitGroupObject[0].group.ToUpper(), () => DrawInGroup(splitGroupObject));
                 }
-
-                GUILayout.Space(10);
-                EditorGUILayout.EndHorizontal();
             }
 
             void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup)
@@ -534,10 +485,11 @@ namespace Pancake.Editor
                         var pickObj = pickObjectsInGroup[counter];
                         var go = pickObj.pickedObject;
                         var tex = LevelWindow.GetPreview(go);
-                        if (GUILayout.Button("", GUILayout.Width(size), GUILayout.Height(size)))
-                        {
-                            _currentPickObject = _currentPickObject == pickObj ? null : pickObj;
-                        }
+                        Uniform.Button("",
+                            () => _currentPickObject = _currentPickObject == pickObj ? null : pickObj,
+                            null,
+                            GUILayout.Width(size),
+                            GUILayout.Height(size));
 
                         var rect = GUILayoutUtility.GetLastRect().Grown(-3);
                         if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(11, 255, 111, 255));

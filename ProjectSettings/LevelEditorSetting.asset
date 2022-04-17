@@ -1,4 +1,6 @@
 {
-    "pickupObjectWhiteList": [],
+    "pickupObjectWhiteList": [
+        "Assets/_Root/Editor"
+    ],
     "pickupObjectBlackList": []
 }
