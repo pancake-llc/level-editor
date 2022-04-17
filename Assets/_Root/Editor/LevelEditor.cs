@@ -315,16 +315,20 @@ namespace Pancake.Editor
 
             void DrawDropArea()
             {
+                float width = 0;
                 var @event = Event.current;
                 Uniform.Horizontal(() =>
                 {
                     var whiteArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
                     var blackArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
+                    // ReSharper disable once CompareOfFloatsByEqualityOperator
+                    if (whiteArea.width == 1f) width = position.width / 2;
+                    else width = whiteArea.width;
                     GUI.backgroundColor = new Color(0f, 0.83f, 1f);
-                    GUI.Box(whiteArea, "WHITE LIST", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
+                    GUI.Box(whiteArea, "[WHITE LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     GUI.backgroundColor = new Color(1f, 0.13f, 0f);
-                    GUI.Box(blackArea, "BLACK LIST", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
+                    GUI.Box(blackArea, "[BLACK LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     switch (@event.type)
                     {
@@ -365,7 +369,84 @@ namespace Pancake.Editor
 
                             SaveLevelEditorSetting();
                             break;
+
+                        case EventType.MouseDown when @event.button == 1:
+                            var menu = new GenericMenu();
+                            if (whiteArea.Contains(@event.mousePosition))
+                            {
+                                menu.AddItem(new GUIContent("Clear All [WHITE LIST]"),
+                                    false,
+                                    () =>
+                                    {
+                                        LevelEditorSettings.pickupObjectWhiteList.Clear();
+                                        SaveLevelEditorSetting();
+                                    });
+                            }
+                            else if (blackArea.Contains(@event.mousePosition))
+                            {
+                                menu.AddItem(new GUIContent("Clear All [BLACK LIST]"),
+                                    false,
+                                    () =>
+                                    {
+                                        LevelEditorSettings.pickupObjectBlackList.Clear();
+                                        SaveLevelEditorSetting();
+                                    });
+                            }
+
+                            menu.ShowAsContext();
+                            break;
                     }
+                });
+
+                Uniform.Horizontal(() =>
+                {
+                    Uniform.VerticalScope(() =>
+                        {
+                            if (LevelEditorSettings.pickupObjectWhiteList.Count == 0)
+                            {
+                                EditorGUILayout.LabelField(new GUIContent(""), GUILayout.Width(width - 50));
+                            }
+                            else
+                            {
+                                foreach (string t in LevelEditorSettings.pickupObjectWhiteList.ToList())
+                                {
+                                    DrawRow(t, width, _ => LevelEditorSettings.pickupObjectWhiteList.Remove(_));
+                                }
+                            }
+                        },
+                        GUILayout.Width(width - 10));
+                    Uniform.SpaceOneLine();
+                    Uniform.VerticalScope(() =>
+                        {
+                            if (LevelEditorSettings.pickupObjectBlackList.Count == 0)
+                            {
+                                EditorGUILayout.LabelField(new GUIContent(""), GUILayout.Width(width - 50));
+                            }
+                            else
+                            {
+                                foreach (string t in LevelEditorSettings.pickupObjectBlackList.ToList())
+                                {
+                                    DrawRow(t, width, _ => LevelEditorSettings.pickupObjectBlackList.Remove(_));
+                                }
+                            }
+                        },
+                        GUILayout.Width(width - 15));
+                });
+            }
+
+
+            void DrawRow(string content, float width, Action<string> action)
+            {
+                Uniform.Horizontal(() =>
+                {
+                    EditorGUILayout.LabelField(new GUIContent(content), GUILayout.Width(width - 50));
+                    GUILayout.FlexibleSpace();
+                    Uniform.Button(Uniform.IconContent("Toolbar Minus", "Remove"),
+                        () =>
+                        {
+                            action?.Invoke(content);
+                            SaveLevelEditorSetting();
+                        });
                 });
             }
 
@@ -380,9 +461,6 @@ namespace Pancake.Editor
                 if (IsCanAddToCollection(path, LevelEditorSettings.pickupObjectBlackList)) LevelEditorSettings.pickupObjectBlackList.Add(path);
                 LevelEditorSettings.pickupObjectBlackList = LevelEditorSettings.pickupObjectBlackList.Distinct().ToList(); //unique
             }
-
-            bool IsDirectory(string path) => Directory.Exists(path);
-            bool IsFile(string path) => File.Exists(path);
 
             bool IsCanAddToCollection(string path, List<string> source)
             {
@@ -430,7 +508,7 @@ namespace Pancake.Editor
                     foreach (var p in allParent)
                     {
                         if (EqualPath(p, dataPath, unique)) continue;
-                        
+
                         valueRemove.Add(u);
                         break;
                     }
@@ -440,7 +518,7 @@ namespace Pancake.Editor
                 {
                     unique.Remove(i);
                 }
-                
+
                 source = unique;
             }
 
@@ -787,6 +865,7 @@ namespace Pancake.Editor
             if (window)
             {
                 window.Init();
+                window.minSize = new Vector2(275, 0);
                 window.Show(true);
             }
         }

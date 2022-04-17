@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.pancake.common": {
-      "version": "https://github.com/pancake-llc/common.git?path=Assets/_Root#1.1.2",
+      "version": "https://github.com/pancake-llc/common.git?path=Assets/_Root#1.1.3",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "49479e3a77bddea2f030375a91dfea69614a2a67"
+      "hash": "c6a20dd8037d92583bce4a19e7910b3f252e9ff3"
     },
     "com.unity.ext.nunit": {
       "version": "1.0.6",
