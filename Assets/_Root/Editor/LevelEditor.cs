@@ -491,9 +491,15 @@ namespace Pancake.Editor
                             GUILayout.Height(size));
 
                         var rect = GUILayoutUtility.GetLastRect().Grown(-3);
-                        if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(11, 255, 111, 255));
+                        if (pickObj == _currentPickObject) EditorGUI.DrawRect(rect, new Color32(86, 221, 255, 242));
                         if (tex) GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit);
-                        if (go) EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.miniLabel) {alignment = TextAnchor.LowerCenter});
+                        if (go)
+                        {
+                            if (pickObj == _currentPickObject)
+                                EditorGUI.DropShadowLabel(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
+                            else
+                                EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
+                        }
 
                         counter++;
                         if (counter >= pickObjectsInGroup.Count) break;
