@@ -8,5 +8,11 @@ namespace Pancake.Editor
     {
         public List<string> pickupObjectWhiteList;
         public List<string> pickupObjectBlackList;
+
+        public LevelEditorSettings()
+        {
+            pickupObjectBlackList = new List<string>();
+            pickupObjectWhiteList = new List<string>();
+        }
     }
 }

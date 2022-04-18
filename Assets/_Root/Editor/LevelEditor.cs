@@ -10,7 +10,6 @@ namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
-        private const string DEFAULT_LEVEL_SETTING_PATH = "ProjectSettings/LevelEditorSetting.asset";
         private readonly string[] _optionsSpawn = {"Default", "Custom"};
 
         private Vector3 _prevPosition;
@@ -18,29 +17,13 @@ namespace Pancake.Editor
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
         private SerializedObject _pathFolderSerializedObject;
-
         private SerializedProperty _pathFolderProperty;
         private bool _flagFoldoutPath;
         private GameObject _currentSpawnGameObject;
         private int _selectedSpawn;
         private GameObject _attachSpawnGameObject;
 
-        private static LevelEditorSettings levelEditorSettings;
-
-        private static LevelEditorSettings LevelEditorSettings
-        {
-            get
-            {
-                if (levelEditorSettings == null) LoadLevelEditorSetting();
-
-                return levelEditorSettings;
-            }
-            set
-            {
-                levelEditorSettings = value;
-                SaveLevelEditorSetting();
-            }
-        }
+        private static UtilEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new UtilEditor.ProjectSetting<LevelEditorSettings>();
 
         private List<PickObject> PickObjects
         {
@@ -57,31 +40,10 @@ namespace Pancake.Editor
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
         }
 
-        public static void LoadLevelEditorSetting()
-        {
-            levelEditorSettings = new LevelEditorSettings();
-            if (!DEFAULT_LEVEL_SETTING_PATH.FileExists()) return;
-            string json = File.ReadAllText(DEFAULT_LEVEL_SETTING_PATH);
-            levelEditorSettings = JsonUtility.FromJson<LevelEditorSettings>(json);
-        }
-
-        private static void SaveLevelEditorSetting()
-        {
-            if (!"ProjectSettings".DirectoryExists()) Directory.CreateDirectory("ProjectSettings");
-
-            try
-            {
-                File.WriteAllText(DEFAULT_LEVEL_SETTING_PATH, JsonUtility.ToJson(levelEditorSettings, true));
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Unable to save LevelEditorSetting!\n" + e.Message);
-            }
-        }
-
         private void OnEnable()
         {
-            LoadLevelEditorSetting();
+            Uniform.FoldoutSettings.LoadSetting();
+            levelEditorSettings.LoadSetting();
             RefreshPickObject();
             SceneView.duringSceneGui += OnSceneGUI;
         }
@@ -91,6 +53,9 @@ namespace Pancake.Editor
             SceneView.duringSceneGui -= GridUpdate;
             EditorApplication.playModeStateChanged -= PlayModeStateChanged;
             SceneView.duringSceneGui -= OnSceneGUI;
+
+            levelEditorSettings.SaveSetting();
+            Uniform.FoldoutSettings.SaveSetting();
         }
 
         private void PlayModeStateChanged(PlayModeStateChange obj) { }
@@ -117,7 +82,7 @@ namespace Pancake.Editor
         {
             _pickObjects = new List<PickObject>();
 
-            foreach (string whitepath in LevelEditorSettings.pickupObjectWhiteList)
+            foreach (string whitepath in levelEditorSettings.Settings.pickupObjectWhiteList)
             {
                 MakeGroupPrefab(whitepath);
             }
@@ -218,12 +183,12 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        ValidateCross(path, ref LevelEditorSettings.pickupObjectBlackList);
+                                        ValidateCross(path, ref levelEditorSettings.Settings.pickupObjectBlackList);
                                         AddToWhiteList(path);
                                     }
 
-                                    ReduceScopeDirectory(ref LevelEditorSettings.pickupObjectWhiteList);
-                                    SaveLevelEditorSetting();
+                                    ReduceScopeDirectory(ref levelEditorSettings.Settings.pickupObjectWhiteList);
+                                    levelEditorSettings.SaveSetting();
                                 }
                             }
                             else if (blackArea.Contains(@event.mousePosition))
@@ -234,16 +199,16 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        ValidateCross(path, ref LevelEditorSettings.pickupObjectWhiteList);
+                                        ValidateCross(path, ref levelEditorSettings.Settings.pickupObjectWhiteList);
                                         AddToBlackList(path);
                                     }
 
-                                    ReduceScopeDirectory(ref LevelEditorSettings.pickupObjectBlackList);
-                                    SaveLevelEditorSetting();
+                                    ReduceScopeDirectory(ref levelEditorSettings.Settings.pickupObjectBlackList);
+                                    levelEditorSettings.SaveSetting();
                                 }
                             }
 
-                            SaveLevelEditorSetting();
+                            levelEditorSettings.SaveSetting();
                             break;
                         case EventType.MouseDown when @event.button == 1:
                             var menu = new GenericMenu();
@@ -253,8 +218,8 @@ namespace Pancake.Editor
                                     false,
                                     () =>
                                     {
-                                        LevelEditorSettings.pickupObjectWhiteList.Clear();
-                                        SaveLevelEditorSetting();
+                                        levelEditorSettings.Settings.pickupObjectWhiteList.Clear();
+                                        levelEditorSettings.SaveSetting();
                                     });
                             }
                             else if (blackArea.Contains(@event.mousePosition))
@@ -263,8 +228,8 @@ namespace Pancake.Editor
                                     false,
                                     () =>
                                     {
-                                        LevelEditorSettings.pickupObjectBlackList.Clear();
-                                        SaveLevelEditorSetting();
+                                        levelEditorSettings.Settings.pickupObjectBlackList.Clear();
+                                        levelEditorSettings.SaveSetting();
                                     });
                             }
 
@@ -277,15 +242,15 @@ namespace Pancake.Editor
                 {
                     Uniform.VerticalScope(() =>
                         {
-                            if (LevelEditorSettings.pickupObjectWhiteList.Count == 0)
+                            if (levelEditorSettings.Settings.pickupObjectWhiteList.Count == 0)
                             {
                                 EditorGUILayout.LabelField(new GUIContent(""), GUILayout.Width(width - 50), GUILayout.Height(0));
                             }
                             else
                             {
-                                foreach (string t in LevelEditorSettings.pickupObjectWhiteList.ToList())
+                                foreach (string t in levelEditorSettings.Settings.pickupObjectWhiteList.ToList())
                                 {
-                                    DrawRow(t, width, _ => LevelEditorSettings.pickupObjectWhiteList.Remove(_));
+                                    DrawRow(t, width, _ => levelEditorSettings.Settings.pickupObjectWhiteList.Remove(_));
                                 }
                             }
                         },
@@ -293,15 +258,15 @@ namespace Pancake.Editor
                     Uniform.SpaceOneLine();
                     Uniform.VerticalScope(() =>
                         {
-                            if (LevelEditorSettings.pickupObjectBlackList.Count == 0)
+                            if (levelEditorSettings.Settings.pickupObjectBlackList.Count == 0)
                             {
                                 EditorGUILayout.LabelField(new GUIContent(""), GUILayout.Width(width - 50), GUILayout.Height(0));
                             }
                             else
                             {
-                                foreach (string t in LevelEditorSettings.pickupObjectBlackList.ToList())
+                                foreach (string t in levelEditorSettings.Settings.pickupObjectBlackList.ToList())
                                 {
-                                    DrawRow(t, width, _ => LevelEditorSettings.pickupObjectBlackList.Remove(_));
+                                    DrawRow(t, width, _ => levelEditorSettings.Settings.pickupObjectBlackList.Remove(_));
                                 }
                             }
                         },
@@ -319,21 +284,21 @@ namespace Pancake.Editor
                         () =>
                         {
                             action?.Invoke(content);
-                            SaveLevelEditorSetting();
+                            levelEditorSettings.SaveSetting();
                         });
                 });
             }
 
             void AddToWhiteList(string path)
             {
-                if (IsCanAddToCollection(path, LevelEditorSettings.pickupObjectWhiteList)) LevelEditorSettings.pickupObjectWhiteList.Add(path);
-                LevelEditorSettings.pickupObjectWhiteList = LevelEditorSettings.pickupObjectWhiteList.Distinct().ToList(); //unique
+                if (IsCanAddToCollection(path, levelEditorSettings.Settings.pickupObjectWhiteList)) levelEditorSettings.Settings.pickupObjectWhiteList.Add(path);
+                levelEditorSettings.Settings.pickupObjectWhiteList = levelEditorSettings.Settings.pickupObjectWhiteList.Distinct().ToList(); //unique
             }
 
             void AddToBlackList(string path)
             {
-                if (IsCanAddToCollection(path, LevelEditorSettings.pickupObjectBlackList)) LevelEditorSettings.pickupObjectBlackList.Add(path);
-                LevelEditorSettings.pickupObjectBlackList = LevelEditorSettings.pickupObjectBlackList.Distinct().ToList(); //unique
+                if (IsCanAddToCollection(path, levelEditorSettings.Settings.pickupObjectBlackList)) levelEditorSettings.Settings.pickupObjectBlackList.Add(path);
+                levelEditorSettings.Settings.pickupObjectBlackList = levelEditorSettings.Settings.pickupObjectBlackList.Distinct().ToList(); //unique
             }
 
             bool IsCanAddToCollection(string path, List<string> source)
