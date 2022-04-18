@@ -1,6 +1,13 @@
 {
     "pickupObjectWhiteList": [
-        "Assets/_Root/Editor"
+        "Assets/_Root/ContentA",
+        "Assets/_Root/ContentB"
     ],
-    "pickupObjectBlackList": []
+    "pickupObjectBlackList": [
+        "Assets/_Root/ContentA/GameObject 1.prefab",
+        "Assets/_Root/ContentB/Candy.prefab",
+        "Assets/_Root/ContentA/GameObject (1) 1.prefab",
+        "Assets/_Root/ContentA/GameObject (1).prefab",
+        "Assets/_Root/ContentA/ContentC"
+    ]
 }

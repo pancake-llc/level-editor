@@ -22,7 +22,9 @@ namespace Pancake.Editor
         private GameObject _currentSpawnGameObject;
         private int _selectedSpawn;
         private GameObject _attachSpawnGameObject;
+        private string _dataPath;
 
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
         private static UtilEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new UtilEditor.ProjectSetting<LevelEditorSettings>();
 
         private List<PickObject> PickObjects
@@ -42,6 +44,7 @@ namespace Pancake.Editor
 
         private void OnEnable()
         {
+            _dataPath = Application.dataPath.Replace('/', '\\');
             Uniform.FoldoutSettings.LoadSetting();
             levelEditorSettings.LoadSetting();
             RefreshPickObject();
@@ -68,6 +71,7 @@ namespace Pancake.Editor
 
         private bool TryClose() { return false; }
 
+        // ReSharper disable once UnusedMember.Local
         private void RefreshAll()
         {
             LevelWindow.ClearPreviews();
@@ -87,32 +91,50 @@ namespace Pancake.Editor
                 MakeGroupPrefab(whitepath);
             }
 
-            void MakeGroupPrefab(string path)
+            // string CheckBlackListOfPath(string pathWhiteList)
+            // {
+            //     var check = false;
+            //     foreach (string pathBackList in levelEditorSettings.Settings.pickupObjectBlackList)
+            //     {
+            //         if (IsChildOfPath(pathWhiteList, pathBackList)) check = true;
+            //     }
+            //
+            //     return check;
+            // }
+
+            void MakeGroupPrefab(string whitePath)
             {
-                if (!Directory.Exists(path) && !File.Exists(path) || !path.StartsWith("Assets"))
+                if (!Directory.Exists(whitePath) && !File.Exists(whitePath) || !whitePath.StartsWith("Assets"))
                 {
-                    Debug.LogWarning("[Level Editor]: Can not found folder '" + path + "'");
+                    Debug.LogWarning("[Level Editor]: Can not found folder '" + whitePath + "'");
                     return;
                 }
-
+                
                 var levelObjects = new List<GameObject>();
-                if (File.Exists(path))
+                if (File.Exists(whitePath))
                 {
-                    levelObjects.Add(AssetDatabase.LoadAssetAtPath<GameObject>(path));
+                    levelObjects.Add(AssetDatabase.LoadAssetAtPath<GameObject>(whitePath));
                 }
                 else
                 {
-                    levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "").Replace("Assets/", ""))
+                    // var removeList = new List<string>();
+                    //
+                    // foreach (string blackPath in levelEditorSettings.Settings.pickupObjectBlackList)
+                    // {
+                    //     if (blackPath.Contains(whitePath)) removeList.Add(blackPath);
+                    // }
+                    
+                    levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(whitePath.Replace(Application.dataPath, "").Replace("Assets/", ""))
                         .Where(lo => !(lo is null))
                         .ToList();
                 }
 
                 foreach (var obj in levelObjects)
                 {
-                    string group = path.Split('/').Last();
-                    if (File.Exists(path))
+                    string group = whitePath.Split('/').Last();
+                    if (File.Exists(whitePath))
                     {
-                        var pathInfo = new DirectoryInfo(path);
+                        var pathInfo = new DirectoryInfo(whitePath);
                         if (pathInfo.Parent != null) group = pathInfo.Parent.Name;
                     }
 
@@ -183,7 +205,7 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        ValidateCross(path, ref levelEditorSettings.Settings.pickupObjectBlackList);
+                                        ValidateByWhite(path, ref levelEditorSettings.Settings.pickupObjectBlackList);
                                         AddToWhiteList(path);
                                     }
 
@@ -199,7 +221,7 @@ namespace Pancake.Editor
                                     DragAndDrop.AcceptDrag();
                                     foreach (string path in DragAndDrop.paths)
                                     {
-                                        ValidateCross(path, ref levelEditorSettings.Settings.pickupObjectWhiteList);
+                                        ValidateByBlack(path, ref levelEditorSettings.Settings.pickupObjectWhiteList);
                                         AddToBlackList(path);
                                     }
 
@@ -289,97 +311,105 @@ namespace Pancake.Editor
                 });
             }
 
-            void AddToWhiteList(string path)
+            void ValidateByWhite(string path, ref List<string> blackList)
             {
-                if (IsCanAddToCollection(path, levelEditorSettings.Settings.pickupObjectWhiteList)) levelEditorSettings.Settings.pickupObjectWhiteList.Add(path);
-                levelEditorSettings.Settings.pickupObjectWhiteList = levelEditorSettings.Settings.pickupObjectWhiteList.Distinct().ToList(); //unique
-            }
-
-            void AddToBlackList(string path)
-            {
-                if (IsCanAddToCollection(path, levelEditorSettings.Settings.pickupObjectBlackList)) levelEditorSettings.Settings.pickupObjectBlackList.Add(path);
-                levelEditorSettings.Settings.pickupObjectBlackList = levelEditorSettings.Settings.pickupObjectBlackList.Distinct().ToList(); //unique
-            }
-
-            bool IsCanAddToCollection(string path, List<string> source)
-            {
-                if (File.Exists(path) && !Path.GetExtension(path).Equals(".prefab")) return false;
-                if (source.Count == 0) return true;
-                var info = new DirectoryInfo(path);
-                var allParent = new List<DirectoryInfo>();
-                GetAllParentDirectories(info, ref allParent);
-
-                string dataPath = Application.dataPath.Replace('/', '\\');
-                foreach (var p in allParent)
+                foreach (string t in blackList.ToList())
                 {
-                    if (!EqualPath(p, dataPath, source)) return false;
-                }
-
-                return true;
-            }
-
-            bool EqualPath(FileSystemInfo p, string dataPath, List<string> source)
-            {
-                string relativePath = p.FullName;
-                if (relativePath.StartsWith(dataPath)) relativePath = "Assets" + relativePath.Substring(Application.dataPath.Length);
-                relativePath = relativePath.Replace('\\', '/');
-
-                foreach (string s in source)
-                {
-                    if (s.Equals(relativePath)) return false;
-                }
-
-                return true;
-            }
-
-            void ReduceScopeDirectory(ref List<string> source)
-            {
-                var arr = new string[source.Count];
-                source.CopyTo(arr);
-                var valueRemove = new List<string>();
-                var unique = arr.Distinct().ToList();
-                string dataPath = Application.dataPath.Replace('/', '\\');
-                foreach (string u in unique)
-                {
-                    var info = new DirectoryInfo(u);
-                    var allParent = new List<DirectoryInfo>();
-                    GetAllParentDirectories(info, ref allParent);
-                    allParent.Remove(info);
-                    foreach (var p in allParent)
-                    {
-                        if (EqualPath(p, dataPath, unique)) continue;
-
-                        valueRemove.Add(u);
-                        break;
-                    }
-                }
-
-                foreach (string i in valueRemove)
-                {
-                    unique.Remove(i);
-                }
-
-                source = unique;
-            }
-
-            void ValidateCross(string path, ref List<string> target)
-            {
-                foreach (string t in target.ToList())
-                {
-                    if (path.Equals(t)) target.Remove(t);
+                    if (path.Equals(t)) blackList.Remove(t);
                 }
             }
 
-            void GetAllParentDirectories(DirectoryInfo directoryToScan, ref List<DirectoryInfo> directories)
+            void ValidateByBlack(string path, ref List<string> whiteList)
             {
-                while (true)
+                foreach (string t in whiteList.ToList())
                 {
-                    if (directoryToScan == null || directoryToScan.Name == directoryToScan.Root.Name || !directoryToScan.FullName.Contains("Assets")) return;
-
-                    directories.Add(directoryToScan);
-                    directoryToScan = directoryToScan.Parent;
+                    if (path.Equals(t) || IsChildOfPath(t, path)) whiteList.Remove(t);
                 }
             }
+        }
+
+        private void AddToWhiteList(string path)
+        {
+            var check = false;
+            foreach (string whitePath in levelEditorSettings.Settings.pickupObjectWhiteList)
+            {
+                if (IsChildOfPath(path, whitePath)) check = true;
+            }
+
+            if (!check) levelEditorSettings.Settings.pickupObjectWhiteList.Add(path);
+            levelEditorSettings.Settings.pickupObjectWhiteList = levelEditorSettings.Settings.pickupObjectWhiteList.Distinct().ToList(); //unique
+        }
+
+        private void AddToBlackList(string path)
+        {
+            var check = false;
+            foreach (string blackPath in levelEditorSettings.Settings.pickupObjectBlackList)
+            {
+                if (IsChildOfPath(path, blackPath)) check = true;
+            }
+
+            if (!check) levelEditorSettings.Settings.pickupObjectBlackList.Add(path);
+            levelEditorSettings.Settings.pickupObjectBlackList = levelEditorSettings.Settings.pickupObjectBlackList.Distinct().ToList(); //unique
+        }
+
+        // return true if child is childrent of parent
+        private bool IsChildOfPath(string child, string parent)
+        {
+            if (child.Equals(parent)) return false;
+            var allParent = new List<DirectoryInfo>();
+            GetAllParentDirectories(new DirectoryInfo(child), ref allParent);
+
+            foreach (var p in allParent)
+            {
+                bool check = EqualPath(p, parent);
+                if (check) return true;
+            }
+
+            return false;
+        }
+
+        static void GetAllParentDirectories(DirectoryInfo directoryToScan, ref List<DirectoryInfo> directories)
+        {
+            while (true)
+            {
+                if (directoryToScan == null || directoryToScan.Name == directoryToScan.Root.Name || !directoryToScan.FullName.Contains("Assets")) return;
+
+                directories.Add(directoryToScan);
+                directoryToScan = directoryToScan.Parent;
+            }
+        }
+
+        private bool EqualPath(FileSystemInfo info, string str)
+        {
+            string relativePath = info.FullName;
+            if (relativePath.StartsWith(_dataPath)) relativePath = "Assets" + relativePath.Substring(Application.dataPath.Length);
+            relativePath = relativePath.Replace('\\', '/');
+            return str.Equals(relativePath);
+        }
+
+        private void ReduceScopeDirectory(ref List<string> source)
+        {
+            var arr = new string[source.Count];
+            source.CopyTo(arr);
+            var valueRemove = new List<string>();
+            var unique = arr.Distinct().ToList();
+            foreach (string u in unique)
+            {
+                var check = false;
+                foreach (string k in unique)
+                {
+                    if (IsChildOfPath(u, k)) check = true;
+                }
+
+                if (check) valueRemove.Add(u);
+            }
+
+            foreach (string i in valueRemove)
+            {
+                unique.Remove(i);
+            }
+
+            source = unique;
         }
 
         private void InternalDrawSetting()
