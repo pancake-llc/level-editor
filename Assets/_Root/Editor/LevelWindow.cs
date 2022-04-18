@@ -61,18 +61,16 @@ namespace Pancake.Editor
         {
             if (!go) return null;
             if (!canCreate) return previewDict?.GetOrDefault(go);
-            else
+            
+            if (previewDict == null) previewDict = new Dictionary<GameObject, Texture2D>();
+            previewDict.TryGetValue(go, out var tex);
+            if (!tex)
             {
-                if (previewDict == null) previewDict = new Dictionary<GameObject, Texture2D>();
-                previewDict.TryGetValue(go, out var tex);
-                if (!tex)
-                {
-                    tex = PreviewGenerator.CreatePreview(go.gameObject);
-                    previewDict[go] = tex;
-                }
-
-                return tex;
+                tex = PreviewGenerator.CreatePreview(go.gameObject);
+                previewDict[go] = tex;
             }
+
+            return tex;
         }
 
         [MenuItem("Tools/Snorlax/Level Editor &_3")]

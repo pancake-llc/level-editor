@@ -11,7 +11,7 @@ namespace Pancake.Editor
     public class LevelEditor : EditorWindow
     {
         private const string DEFAULT_LEVEL_SETTING_PATH = "ProjectSettings/LevelEditorSetting.asset";
-        private readonly string[] _optionsSpawn = {"Default", "Child", "Custom"};
+        private readonly string[] _optionsSpawn = {"Default", "Custom"};
 
         private Vector3 _prevPosition;
         private Vector2 _pickObjectScrollPosition;
@@ -23,7 +23,6 @@ namespace Pancake.Editor
         private bool _flagFoldoutPath;
         private GameObject _currentSpawnGameObject;
         private int _selectedSpawn;
-        private int _childSpawnIndex;
         private GameObject _attachSpawnGameObject;
 
         private static LevelEditorSettings levelEditorSettings;
@@ -131,9 +130,17 @@ namespace Pancake.Editor
                     return;
                 }
 
-                var levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "").Replace("Assets/", ""))
-                    .Where(lo => !(lo is null))
-                    .ToList();
+                var levelObjects = new List<GameObject>();
+                if (File.Exists(path))
+                {
+                    levelObjects.Add(AssetDatabase.LoadAssetAtPath<GameObject>(path));
+                }
+                else
+                {
+                    levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(path.Replace(Application.dataPath, "").Replace("Assets/", ""))
+                        .Where(lo => !(lo is null))
+                        .ToList();
+                }
 
                 foreach (var obj in levelObjects)
                 {
@@ -423,10 +430,6 @@ namespace Pancake.Editor
                     {
                         case "Default":
                             break;
-                        case "Child":
-                            Uniform.SpaceOneLine();
-                            _childSpawnIndex = EditorGUILayout.IntField("Child (X): ", _childSpawnIndex, GUILayout.Width(400), GUILayout.Height(20));
-                            break;
                         case "Custom":
                             Uniform.SpaceOneLine();
                             _attachSpawnGameObject = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
@@ -446,12 +449,14 @@ namespace Pancake.Editor
                 if (tex)
                 {
                     string pickObjectName = _currentPickObject?.pickedObject.name;
-                    if (GUILayout.Button(tex, GUILayout.Height(50)))
+                    Uniform.SpaceOneLine();
+                    Uniform.Horizontal(() =>
                     {
-                        _currentPickObject = null;
-                    }
+                        GUILayout.Space(position.width / 2 - 50);
+                        if (GUILayout.Button(tex, GUILayout.Height(80), GUILayout.Width(80))) _currentPickObject = null;
+                    });
 
-                    EditorGUILayout.LabelField($"Selected: {pickObjectName}. Press Icon Or Escape Key To Deselect");
+                    EditorGUILayout.LabelField($"Selected: {pickObjectName}\nPress Icon Again Or Escape Key To Deselect", GUILayout.Height(40));
                     Uniform.HelpBox("Shift + Click To Add", MessageType.Info);
                 }
                 else
@@ -462,7 +467,8 @@ namespace Pancake.Editor
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
                 foreach (var splitGroupObject in resultSplitGroupObjects)
                 {
-                    Uniform.DrawUppercaseSection("LEVEL_EDITOR_PICKUP_AREA_CHILD", splitGroupObject[0].group.ToUpper(), () => DrawInGroup(splitGroupObject));
+                    string nameGroup = splitGroupObject[0].group.ToUpper();
+                    Uniform.DrawUppercaseSection($"LEVEL_EDITOR_PICKUP_AREA_CHILD_{nameGroup}", nameGroup, () => DrawInGroup(splitGroupObject));
                 }
             }
 
@@ -551,7 +557,7 @@ namespace Pancake.Editor
         }
 
         /// <summary>
-        /// 
+        /// Spawn pickup object
         /// </summary>
         /// <param name="pickObject"></param>
         /// <param name="worldPos"></param>
@@ -559,7 +565,7 @@ namespace Pancake.Editor
         {
             if (pickObject?.pickedObject)
             {
-                Transform parent = null;
+                Transform parent;
 
 #if UNITY_2021_1_OR_NEWER
                 UnityEditor.SceneManagement.PrefabStage currentPrefabState;
@@ -571,26 +577,29 @@ namespace Pancake.Editor
 
                 if (currentPrefabState != null)
                 {
+                    var prefabRoot = currentPrefabState.prefabContentsRoot.transform;
                     if (_optionsSpawn[_selectedSpawn] == "Default")
                     {
-                        parent = currentPrefabState.prefabContentsRoot.transform;
-                    }
-                    else if (_optionsSpawn[_selectedSpawn] == "Child")
-                    {
-                        parent = currentPrefabState.prefabContentsRoot.transform.GetChild(_childSpawnIndex);
+                        parent = prefabRoot;
                     }
                     else
                     {
-                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : currentPrefabState.prefabContentsRoot.transform;
+                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : prefabRoot;
                     }
                 }
                 else
                 {
-                    var levelMap = GameObject.Find("LevelContent");
-                    if (levelMap != null) parent = levelMap.transform;
+                    if (_optionsSpawn[_selectedSpawn] == "Default")
+                    {
+                        parent = null;
+                    }
+                    else
+                    {
+                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : null;
+                    }
                 }
 
-                var inst = Instantiate(parent);
+                var inst = pickObject.pickedObject.Instantiate(parent);
                 inst.transform.position = worldPos;
 
                 // if (inst.CalculateBounds(out var bounds,
@@ -613,7 +622,7 @@ namespace Pancake.Editor
         }
 
         /// <summary>
-        /// 
+        /// Calculate count item pickup can display
         /// </summary>
         /// <param name="availableSpace"></param>
         /// <param name="minSize"></param>
