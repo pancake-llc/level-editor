@@ -458,7 +458,7 @@ namespace Pancake.Editor
                 {
                     Uniform.HelpBox("Select An Object First", MessageType.Info);
                 }
-                
+
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
                 foreach (var splitGroupObject in resultSplitGroupObjects)
                 {
@@ -469,7 +469,7 @@ namespace Pancake.Editor
             void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup)
             {
                 var counter = 0;
-                CalculateIdealCount(Screen.width - 50,
+                CalculateIdealCount(position.width - 50,
                     60,
                     135,
                     5,
@@ -479,7 +479,6 @@ namespace Pancake.Editor
                 while (counter >= 0 && counter < pickObjectsInGroup.Count)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    GUILayout.Space(20);
                     for (var x = 0; x < count; x++)
                     {
                         var pickObj = pickObjectsInGroup[counter];
@@ -624,7 +623,7 @@ namespace Pancake.Editor
             int maxCount = Mathf.FloorToInt(availableSpace / minSize);
             bool goodness = defaultCount >= minCount && defaultCount <= maxCount;
             count = Mathf.Clamp(defaultCount, minCount, maxCount);
-            size = availableSpace / count;
+            size = (availableSpace - (count - 1) * (count / 10f)) / count;
             return goodness;
         }
 
