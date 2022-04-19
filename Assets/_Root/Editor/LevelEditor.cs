@@ -89,6 +89,8 @@ namespace Pancake.Editor
             foreach (string whitepath in levelEditorSettings.Settings.pickupObjectWhiteList)
             {
                 MakeGroupPrefab(whitepath);
+                
+                if (!Directory.Exists(whitepath)) continue;
                 string[] directories = Directory.GetDirectories(whitepath);
                 foreach (string directory in directories)
                 {
@@ -96,17 +98,6 @@ namespace Pancake.Editor
                     MakeGroupPrefab(dir);
                 }
             }
-
-            // string CheckBlackListOfPath(string pathWhiteList)
-            // {
-            //     var check = false;
-            //     foreach (string pathBackList in levelEditorSettings.Settings.pickupObjectBlackList)
-            //     {
-            //         if (IsChildOfPath(pathWhiteList, pathBackList)) check = true;
-            //     }
-            //
-            //     return check;
-            // }
 
             void MakeGroupPrefab(string whitePath)
             {

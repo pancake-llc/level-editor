@@ -31,6 +31,10 @@
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTC",
             "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD__ROOT",
+            "state": true
         }
     ]
 }
