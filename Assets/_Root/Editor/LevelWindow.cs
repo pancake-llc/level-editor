@@ -22,15 +22,6 @@ namespace Pancake.Editor
 
         private static Dictionary<GameObject, Texture2D> previewDict;
 
-        // ReSharper disable once UnusedMember.Local
-        private static void SelectPrefabFolder()
-        {
-            var path = "Assets/_Root/Prefabs/";
-            var obj = AssetDatabase.LoadAssetAtPath<Object>(path);
-            Selection.activeObject = obj;
-            EditorGUIUtility.PingObject(obj);
-        }
-
         public static void ClearPreviews()
         {
             if (previewDict != null)
