@@ -10,7 +10,7 @@ namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
-        private readonly string[] _optionsSpawn = {"Default", "Custom"};
+        private readonly string[] _optionsSpawn = { "Default", "Custom" };
 
         private Vector3 _prevPosition;
         private Vector2 _pickObjectScrollPosition;
@@ -89,6 +89,12 @@ namespace Pancake.Editor
             foreach (string whitepath in levelEditorSettings.Settings.pickupObjectWhiteList)
             {
                 MakeGroupPrefab(whitepath);
+                string[] directories = Directory.GetDirectories(whitepath);
+                foreach (string directory in directories)
+                {
+                    string dir = directory.Replace('\\', '/');
+                    MakeGroupPrefab(dir);
+                }
             }
 
             // string CheckBlackListOfPath(string pathWhiteList)
@@ -109,7 +115,7 @@ namespace Pancake.Editor
                     Debug.LogWarning("[Level Editor]: Can not found folder '" + whitePath + "'");
                     return;
                 }
-                
+
                 var levelObjects = new List<GameObject>();
                 if (File.Exists(whitePath))
                 {
@@ -117,28 +123,36 @@ namespace Pancake.Editor
                 }
                 else
                 {
-                    // var removeList = new List<string>();
-                    //
-                    // foreach (string blackPath in levelEditorSettings.Settings.pickupObjectBlackList)
-                    // {
-                    //     if (blackPath.Contains(whitePath)) removeList.Add(blackPath);
-                    // }
-                    
+                    var removeList = new List<string>();
+                    var nameFileExclude = new List<string>();
+
+                    foreach (string blackPath in levelEditorSettings.Settings.pickupObjectBlackList)
+                    {
+                        if (IsChildOfPath(blackPath, whitePath)) removeList.Add(blackPath);
+                    }
+
+                    if (removeList.Contains(whitePath) || levelEditorSettings.Settings.pickupObjectBlackList.Contains(whitePath)) return;
+
+                    foreach (string str in removeList)
+                    {
+                        if (File.Exists(str)) nameFileExclude.Add(Path.GetFileNameWithoutExtension(str));
+                    }
+
                     levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(whitePath.Replace(Application.dataPath, "").Replace("Assets/", ""))
-                        .Where(lo => !(lo is null))
+                        .Where(lo => !(lo is null) && !nameFileExclude.Exists(_ => _.Equals(lo.name)))
                         .ToList();
+                }
+
+                string group = whitePath.Split('/').Last();
+                if (File.Exists(whitePath))
+                {
+                    var pathInfo = new DirectoryInfo(whitePath);
+                    if (pathInfo.Parent != null) group = pathInfo.Parent.Name;
                 }
 
                 foreach (var obj in levelObjects)
                 {
-                    string group = whitePath.Split('/').Last();
-                    if (File.Exists(whitePath))
-                    {
-                        var pathInfo = new DirectoryInfo(whitePath);
-                        if (pathInfo.Parent != null) group = pathInfo.Parent.Name;
-                    }
-
-                    var po = new PickObject {pickedObject = obj.gameObject, group = group};
+                    var po = new PickObject { pickedObject = obj.gameObject, group = group };
                     _pickObjects.Add(po);
                 }
             }
@@ -188,10 +202,10 @@ namespace Pancake.Editor
                     if (whiteArea.width == 1f) width = position.width / 2;
                     else width = whiteArea.width;
                     GUI.backgroundColor = new Color(0f, 0.83f, 1f);
-                    GUI.Box(whiteArea, "[WHITE LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
+                    GUI.Box(whiteArea, "[WHITE LIST]", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
                     GUI.backgroundColor = Color.white;
                     GUI.backgroundColor = new Color(1f, 0.13f, 0f);
-                    GUI.Box(blackArea, "[BLACK LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
+                    GUI.Box(blackArea, "[BLACK LIST]", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
                     GUI.backgroundColor = Color.white;
                     switch (@event.type)
                     {
@@ -211,6 +225,7 @@ namespace Pancake.Editor
 
                                     ReduceScopeDirectory(ref levelEditorSettings.Settings.pickupObjectWhiteList);
                                     levelEditorSettings.SaveSetting();
+                                    RefreshAll();
                                 }
                             }
                             else if (blackArea.Contains(@event.mousePosition))
@@ -227,10 +242,10 @@ namespace Pancake.Editor
 
                                     ReduceScopeDirectory(ref levelEditorSettings.Settings.pickupObjectBlackList);
                                     levelEditorSettings.SaveSetting();
+                                    RefreshAll();
                                 }
                             }
 
-                            levelEditorSettings.SaveSetting();
                             break;
                         case EventType.MouseDown when @event.button == 1:
                             var menu = new GenericMenu();
@@ -307,6 +322,7 @@ namespace Pancake.Editor
                         {
                             action?.Invoke(content);
                             levelEditorSettings.SaveSetting();
+                            RefreshAll();
                         });
                 });
             }
@@ -427,7 +443,7 @@ namespace Pancake.Editor
                             break;
                         case "Custom":
                             Uniform.SpaceOneLine();
-                            _attachSpawnGameObject = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
                             break;
                     }
                 }
@@ -497,9 +513,9 @@ namespace Pancake.Editor
                         if (go)
                         {
                             if (pickObj == _currentPickObject)
-                                EditorGUI.DropShadowLabel(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
+                                EditorGUI.DropShadowLabel(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) { alignment = TextAnchor.LowerCenter });
                             else
-                                EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
+                                EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) { alignment = TextAnchor.LowerCenter });
                         }
 
                         counter++;

@@ -1,13 +1,4 @@
 {
-    "pickupObjectWhiteList": [
-        "Assets/_Root/ContentA",
-        "Assets/_Root/ContentB"
-    ],
-    "pickupObjectBlackList": [
-        "Assets/_Root/ContentA/GameObject 1.prefab",
-        "Assets/_Root/ContentB/Candy.prefab",
-        "Assets/_Root/ContentA/GameObject (1) 1.prefab",
-        "Assets/_Root/ContentA/GameObject (1).prefab",
-        "Assets/_Root/ContentA/ContentC"
-    ]
+    "pickupObjectWhiteList": [],
+    "pickupObjectBlackList": []
 }

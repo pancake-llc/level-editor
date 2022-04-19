@@ -23,6 +23,14 @@
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTB",
             "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTA\\CONTENTC",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTC",
+            "state": true
         }
     ]
 }
