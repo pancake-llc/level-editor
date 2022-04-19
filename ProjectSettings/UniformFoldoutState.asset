@@ -6,58 +6,10 @@
         },
         {
             "key": "LEVEL_EDITOR_CONFIG",
-            "state": false
+            "state": true
         },
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_EDITOR",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTA",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTB",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTA\\CONTENTC",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENTC",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD__ROOT",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENT",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_HERO",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_SUN",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_MOON",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_HHHH",
-            "state": true
-        },
-        {
-            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_KKKK",
             "state": true
         }
     ]
