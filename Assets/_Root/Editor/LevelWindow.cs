@@ -73,7 +73,7 @@ namespace Pancake.Editor
             return tex;
         }
 
-        [MenuItem("Tools/Pancake/Level Editor &_3")]
+        [MenuItem("Tools/Pancake/Level Editor/Show &_3")]
         public static void OpenEditor()
         {
             var window = EditorWindow.GetWindow<LevelEditor>("Level Editor", true, UtilEditor.InspectorWindow);
