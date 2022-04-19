@@ -39,6 +39,26 @@
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENT",
             "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_HERO",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_SUN",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_MOON",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_HHHH",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_KKKK",
+            "state": true
         }
     ]
 }

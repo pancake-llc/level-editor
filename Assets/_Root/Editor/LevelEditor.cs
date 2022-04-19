@@ -88,7 +88,9 @@ namespace Pancake.Editor
                 MakeGroupPrefab(whitepath);
 
                 if (!Directory.Exists(whitepath)) continue;
-                string[] directories = Directory.GetDirectories(whitepath);
+                var directories = new List<string>();
+                GetAllChildDirectories(whitepath, ref directories);
+
                 foreach (string directory in directories)
                 {
                     string dir = directory.Replace('\\', '/');
@@ -244,6 +246,7 @@ namespace Pancake.Editor
                                     {
                                         levelEditorSettings.Settings.pickupObjectWhiteList.Clear();
                                         levelEditorSettings.SaveSetting();
+                                        RefreshAll();
                                     });
                             }
                             else if (blackArea.Contains(@event.mousePosition))
@@ -254,6 +257,7 @@ namespace Pancake.Editor
                                     {
                                         levelEditorSettings.Settings.pickupObjectBlackList.Clear();
                                         levelEditorSettings.SaveSetting();
+                                        RefreshAll();
                                     });
                             }
 
@@ -386,6 +390,17 @@ namespace Pancake.Editor
 
                 directories.Add(directoryToScan);
                 directoryToScan = directoryToScan.Parent;
+            }
+        }
+
+        static void GetAllChildDirectories(string path, ref List<string> directories)
+        {
+            string[] result = Directory.GetDirectories(path);
+            if (result.Length == 0) return;
+            foreach (string i in result)
+            {
+                directories.Add(i);
+                GetAllChildDirectories(i, ref directories);
             }
         }
 
