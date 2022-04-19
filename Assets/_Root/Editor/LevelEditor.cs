@@ -11,7 +11,7 @@ namespace Pancake.Editor
     public class LevelEditor : EditorWindow
     {
         private readonly string[] _optionsSpawn = { "Default", "Custom" };
-        
+
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
@@ -86,7 +86,7 @@ namespace Pancake.Editor
             foreach (string whitepath in levelEditorSettings.Settings.pickupObjectWhiteList)
             {
                 MakeGroupPrefab(whitepath);
-                
+
                 if (!Directory.Exists(whitepath)) continue;
                 string[] directories = Directory.GetDirectories(whitepath);
                 foreach (string directory in directories)
@@ -446,7 +446,7 @@ namespace Pancake.Editor
 
         private void InternalDrawPickupArea()
         {
-            Uniform.DrawUppercaseSection("LEVEL_EDITOR_PICKUP_AREA", "PICKUP AREA", DrawPickupArea);
+            Uniform.DrawUppercaseSectionWithRightClick("LEVEL_EDITOR_PICKUP_AREA", "PICKUP AREA", DrawPickupArea, ShowMenuRefresh);
 
             void DrawPickupArea()
             {
@@ -529,6 +529,13 @@ namespace Pancake.Editor
                     GUILayout.FlexibleSpace();
                     EditorGUILayout.EndHorizontal();
                 }
+            }
+
+            void ShowMenuRefresh()
+            {
+                var menu = new GenericMenu();
+                menu.AddItem(new GUIContent("Refresh Pickup  Area"), false, RefreshAll);
+                menu.ShowAsContext();
             }
         }
 

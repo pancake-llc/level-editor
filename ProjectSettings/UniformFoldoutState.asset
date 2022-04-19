@@ -6,7 +6,7 @@
         },
         {
             "key": "LEVEL_EDITOR_CONFIG",
-            "state": true
+            "state": false
         },
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA",
@@ -34,6 +34,10 @@
         },
         {
             "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD__ROOT",
+            "state": true
+        },
+        {
+            "key": "LEVEL_EDITOR_PICKUP_AREA_CHILD_CONTENT",
             "state": true
         }
     ]

@@ -1,12 +1,12 @@
 {
-  "name": "com.snorlax.level-editor",
+  "name": "com.pancake.level-editor",
   "displayName": "Level Editor",
   "description": "Simple level editor for unity level design",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "unity": "2019.1",
-  "category": "snorlax",
+  "category": "pancake",
   "author": {
-    "name": "Snorlax",
+    "name": "yenmoc",
     "email": "phongsoyenmoc.diep@gmail.com",
     "url": "https://github.com/yenmoc"
   },
@@ -15,10 +15,10 @@
   "dependencies": {},
   "repository": {
     "type": "git",
-    "url": "git@github.com:snorluxe/level-editor.git",
-    "directory": "com.snorlax.level-editor"
+    "url": "git@github.com:pancake-llc/level-editor.git",
+    "directory": "com.pancake.level-editor"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/@snorluxe"
+    "registry": "https://npm.pkg.github.com/@pancake-llc"
   }
 }
