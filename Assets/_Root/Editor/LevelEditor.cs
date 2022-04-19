@@ -11,17 +11,14 @@ namespace Pancake.Editor
     public class LevelEditor : EditorWindow
     {
         private readonly string[] _optionsSpawn = { "Default", "Custom" };
-
-        private Vector3 _prevPosition;
+        
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
         private List<PickObject> _pickObjects;
         private SerializedObject _pathFolderSerializedObject;
         private SerializedProperty _pathFolderProperty;
-        private bool _flagFoldoutPath;
-        private GameObject _currentSpawnGameObject;
         private int _selectedSpawn;
-        private GameObject _attachSpawnGameObject;
+        private GameObject _rootSpawn;
         private string _dataPath;
 
         // ReSharper disable once FieldCanBeMadeReadOnly.Local
@@ -434,7 +431,7 @@ namespace Pancake.Editor
                             break;
                         case "Custom":
                             Uniform.SpaceOneLine();
-                            _attachSpawnGameObject = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _attachSpawnGameObject, typeof(GameObject), true);
+                            _rootSpawn = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _rootSpawn, typeof(GameObject), true);
                             break;
                     }
                 }
@@ -586,7 +583,7 @@ namespace Pancake.Editor
                     }
                     else
                     {
-                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : prefabRoot;
+                        parent = _rootSpawn ? _rootSpawn.transform : prefabRoot;
                     }
                 }
                 else
@@ -597,7 +594,7 @@ namespace Pancake.Editor
                     }
                     else
                     {
-                        parent = _attachSpawnGameObject ? _attachSpawnGameObject.transform : null;
+                        parent = _rootSpawn ? _rootSpawn.transform : null;
                     }
                 }
 
