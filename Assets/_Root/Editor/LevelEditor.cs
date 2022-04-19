@@ -167,7 +167,6 @@ namespace Pancake.Editor
             SceneView.RepaintAll();
             InternalDrawDropArea();
             Uniform.SpaceOneLine();
-            //Uniform.Button("Refresh all", RefreshAll);
             InternalDrawSetting();
             Uniform.SpaceOneLine();
             InternalDrawPickupArea();
@@ -303,8 +302,15 @@ namespace Pancake.Editor
             {
                 Uniform.Horizontal(() =>
                 {
-                    EditorGUILayout.LabelField(new GUIContent(content), GUILayout.Width(width - 50));
+                    EditorGUILayout.LabelField(new GUIContent(content), GUILayout.Width(width - 80));
                     GUILayout.FlexibleSpace();
+                    Uniform.Button(Uniform.IconContent("d_scenevis_visible_hover", "Ping Selection"),
+                        () =>
+                        {
+                            var obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(content);
+                            Selection.activeObject = obj;
+                            EditorGUIUtility.PingObject(obj);
+                        });
                     Uniform.Button(Uniform.IconContent("Toolbar Minus", "Remove"),
                         () =>
                         {
@@ -490,7 +496,17 @@ namespace Pancake.Editor
                         var go = pickObj.pickedObject;
                         var tex = LevelWindow.GetPreview(go);
                         Uniform.Button("",
-                            () => _currentPickObject = _currentPickObject == pickObj ? null : pickObj,
+                            () =>
+                            {
+                                if (Event.current.button == 1)
+                                {
+                                    Selection.activeObject = pickObj.pickedObject;
+                                    EditorGUIUtility.PingObject(pickObj.pickedObject);
+                                    return;
+                                }
+
+                                _currentPickObject = _currentPickObject == pickObj ? null : pickObj;
+                            },
                             null,
                             GUILayout.Width(size),
                             GUILayout.Height(size));
