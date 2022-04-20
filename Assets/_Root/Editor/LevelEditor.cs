@@ -10,7 +10,7 @@ namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
-        private readonly string[] _optionsSpawn = { "Default", "Custom" };
+        private readonly string[] _optionsSpawn = {"Default", "Custom"};
 
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
@@ -19,6 +19,7 @@ namespace Pancake.Editor
         private SerializedProperty _pathFolderProperty;
         private int _selectedSpawn;
         private GameObject _rootSpawn;
+        private GameObject _previewPickupObject;
         private string _dataPath;
 
         // ReSharper disable once FieldCanBeMadeReadOnly.Local
@@ -142,7 +143,7 @@ namespace Pancake.Editor
 
                 foreach (var obj in levelObjects)
                 {
-                    var po = new PickObject { pickedObject = obj.gameObject, group = group };
+                    var po = new PickObject {pickedObject = obj.gameObject, group = group};
                     _pickObjects.Add(po);
                 }
             }
@@ -191,10 +192,10 @@ namespace Pancake.Editor
                     if (whiteArea.width == 1f) width = position.width / 2;
                     else width = whiteArea.width;
                     GUI.backgroundColor = new Color(0f, 0.83f, 1f);
-                    GUI.Box(whiteArea, "[WHITE LIST]", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.Box(whiteArea, "[WHITE LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     GUI.backgroundColor = new Color(1f, 0.13f, 0f);
-                    GUI.Box(blackArea, "[BLACK LIST]", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic });
+                    GUI.Box(blackArea, "[BLACK LIST]", new GUIStyle(EditorStyles.helpBox) {alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Italic});
                     GUI.backgroundColor = Color.white;
                     switch (@event.type)
                     {
@@ -452,7 +453,7 @@ namespace Pancake.Editor
                             break;
                         case "Custom":
                             Uniform.SpaceOneLine();
-                            _rootSpawn = (GameObject)EditorGUILayout.ObjectField("Spawn in GO here -->", _rootSpawn, typeof(GameObject), true);
+                            _rootSpawn = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _rootSpawn, typeof(GameObject), true);
                             break;
                     }
                 }
@@ -532,9 +533,9 @@ namespace Pancake.Editor
                         if (go)
                         {
                             if (pickObj == _currentPickObject)
-                                EditorGUI.DropShadowLabel(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) { alignment = TextAnchor.LowerCenter });
+                                EditorGUI.DropShadowLabel(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
                             else
-                                EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) { alignment = TextAnchor.LowerCenter });
+                                EditorGUI.LabelField(rect, go.name, new GUIStyle(EditorStyles.whiteMiniLabel) {alignment = TextAnchor.LowerCenter});
                         }
 
                         counter++;
@@ -558,13 +559,19 @@ namespace Pancake.Editor
         {
             if (TryClose()) return;
             if (CheckEscape()) return;
-
+            if (this == null) SceneView.duringSceneGui -= OnSceneGUI;
             TryFakeRender(sceneView);
         }
 
         private void TryFakeRender(SceneView sceneView)
         {
-            if (!Event.current.shift) return;
+            var e = Event.current;
+            if (!e.shift)
+            {
+                if (_previewPickupObject != null) DestroyImmediate(_previewPickupObject);
+                return;
+            }
+
             if (_currentPickObject == null || !_currentPickObject.pickedObject) return;
 
             bool state;
@@ -574,21 +581,56 @@ namespace Pancake.Editor
             {
                 state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
                 mousePosition = mousePosition2d;
-            }
-            else
-            {
-                state = UtilEditor.GetMousePosition(out mousePosition, sceneView);
-            }
-
-            if (state)
-            {
+                if (!state) return;
                 UtilEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
                 SceneView.RepaintAll();
 
-                if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                if (e.type == EventType.MouseDown && e.button == 0)
                 {
                     AddPickObject(_currentPickObject, mousePosition);
                     UtilEditor.SkipEvent();
+                }
+            }
+            else
+            {
+                var pos = sceneView.GetInnerGuiPosition();
+                if (pos.Contains(e.mousePosition))
+                {
+                    var filter = ProbeFilter.Default;
+                    filter.ProBuilder = false;
+                    Probe.Pick(filter, sceneView, e.mousePosition, out mousePosition);
+
+                    var is2D = false;
+                    if (!_previewPickupObject)
+                    {
+                        _previewPickupObject = Instantiate(_currentPickObject?.pickedObject);
+                        _previewPickupObject.hideFlags = HideFlags.HideAndDontSave;
+                        _previewPickupObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+
+                        is2D = _previewPickupObject.GetComponent<RectTransform>() != null || _previewPickupObject.GetComponent<SpriteRenderer>() != null;
+                    }
+                    
+                    _previewPickupObject.transform.position = mousePosition;
+
+                    if (!is2D && _previewPickupObject.CalculateBounds(out var bounds,
+                            Space.World,
+                            true,
+                            false,
+                            false,
+                            false,
+                            false))
+                    {
+                        float difference = mousePosition.y - bounds.min.y;
+
+                        _previewPickupObject.transform.position += difference * Vector3.up;
+                        Selection.activeGameObject = _previewPickupObject;
+                    }
+                    
+                    if (e.type == EventType.MouseDown && e.button == 0 && _previewPickupObject)
+                    {
+                        AddPickObject(_currentPickObject, _previewPickupObject.transform.position);
+                        UtilEditor.SkipEvent();
+                    }
                 }
             }
         }
