@@ -4,13 +4,14 @@ using System.IO;
 using System.Linq;
 using Pancake.Common;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Pancake.Editor
 {
     public class LevelEditor : EditorWindow
     {
-        private readonly string[] _optionsSpawn = {"Default", "Custom"};
+        private readonly string[] _optionsSpawn = {"Default", "Index", "Custom"};
 
         private Vector2 _pickObjectScrollPosition;
         private PickObject _currentPickObject;
@@ -19,11 +20,22 @@ namespace Pancake.Editor
         private SerializedProperty _pathFolderProperty;
         private int _selectedSpawn;
         private GameObject _rootSpawn;
+        private int _rootIndexSpawn;
         private GameObject _previewPickupObject;
         private string _dataPath;
 
         // ReSharper disable once FieldCanBeMadeReadOnly.Local
         private static UtilEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new UtilEditor.ProjectSetting<LevelEditorSettings>();
+
+        private static Vector2 EventMousePoint
+        {
+            get
+            {
+                var position = Event.current.mousePosition;
+                position.y = Screen.height - position.y - 60f;
+                return position;
+            }
+        }
 
         private List<PickObject> PickObjects
         {
@@ -451,6 +463,15 @@ namespace Pancake.Editor
                     {
                         case "Default":
                             break;
+                        case "Index":
+                            var currentPrefabState = GetCurrentPrefabStage();
+                            if (currentPrefabState != null)
+                            {
+                                Uniform.SpaceOneLine();
+                                _rootIndexSpawn = EditorGUILayout.IntField(new GUIContent("Index spawn", "Index from root stage contex"), _rootIndexSpawn);
+                            }
+
+                            break;
                         case "Custom":
                             Uniform.SpaceOneLine();
                             _rootSpawn = (GameObject) EditorGUILayout.ObjectField("Spawn in GO here -->", _rootSpawn, typeof(GameObject), true);
@@ -559,7 +580,6 @@ namespace Pancake.Editor
         {
             if (TryClose()) return;
             if (CheckEscape()) return;
-            if (this == null) SceneView.duringSceneGui -= OnSceneGUI;
             TryFakeRender(sceneView);
         }
 
@@ -573,13 +593,10 @@ namespace Pancake.Editor
             }
 
             if (_currentPickObject == null || !_currentPickObject.pickedObject) return;
-
-            bool state;
             Vector3 mousePosition;
-
             if (sceneView.in2DMode)
             {
-                state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
+                bool state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
                 mousePosition = mousePosition2d;
                 if (!state) return;
                 UtilEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
@@ -594,38 +611,62 @@ namespace Pancake.Editor
             else
             {
                 var pos = sceneView.GetInnerGuiPosition();
+                RaycastHit? raycastHit;
                 if (pos.Contains(e.mousePosition))
                 {
-                    var filter = ProbeFilter.Default;
-                    filter.ProBuilder = false;
-                    Probe.Pick(filter, sceneView, e.mousePosition, out mousePosition);
+                    var currentPrefabState = GetCurrentPrefabStage();
+                    if (currentPrefabState != null)
+                    {
+                        (var mouseCast, var hitInfo) = RaycastPoint(GetParent(), EventMousePoint);
+                        mousePosition = mouseCast;
+                        raycastHit = hitInfo;
+                    }
+                    else
+                    {
+                        Probe.Pick(ProbeFilter.Default, sceneView, e.mousePosition, out mousePosition);
+                        raycastHit = null;
+                    }
+                    
+                    float discSize = HandleUtility.GetHandleSize(mousePosition) * 0.4f;
+                    Handles.color = new Color(1, 0, 0, 0.5f);
+                    Handles.DrawSolidDisc(mousePosition, Vector3.up, discSize * 0.5f);
 
-                    var is2D = false;
                     if (!_previewPickupObject)
                     {
                         _previewPickupObject = Instantiate(_currentPickObject?.pickedObject);
+                        StageUtility.PlaceGameObjectInCurrentStage(_previewPickupObject);
                         _previewPickupObject.hideFlags = HideFlags.HideAndDontSave;
                         _previewPickupObject.layer = LayerMask.NameToLayer("Ignore Raycast");
-
-                        is2D = _previewPickupObject.GetComponent<RectTransform>() != null || _previewPickupObject.GetComponent<SpriteRenderer>() != null;
                     }
-                    
-                    _previewPickupObject.transform.position = mousePosition;
 
-                    if (!is2D && _previewPickupObject.CalculateBounds(out var bounds,
-                            Space.World,
-                            true,
-                            false,
-                            false,
-                            false,
-                            false))
+                    void SetPosition2()
                     {
-                        float difference = mousePosition.y - bounds.min.y;
-
-                        _previewPickupObject.transform.position += difference * Vector3.up;
-                        Selection.activeGameObject = _previewPickupObject;
+                        var rendererAttach = _currentPickObject?.pickedObject.GetComponentInChildren<Renderer>();
+                        if (raycastHit == null || rendererAttach == null) return;
+                        var rendererOther = raycastHit.Value.collider.transform.GetComponentInChildren<Renderer>();
+                        if (rendererOther == null) return;
+                        _previewPickupObject.transform.position = GetSpawnPosition(rendererAttach, rendererOther, raycastHit.Value);
                     }
-                    
+
+                    void SetPosition1()
+                    {
+                        _previewPickupObject.transform.position = mousePosition;
+
+                        if (_previewPickupObject.CalculateBounds(out var bounds,
+                                Space.World,
+                                true,
+                                false,
+                                false,
+                                false))
+                        {
+                            float difference = mousePosition.y - bounds.min.y;
+                            _previewPickupObject.transform.position += difference * Vector3.up;
+                        }
+                    }
+
+                    SetPosition1();
+                    //SetPosition2();
+
                     if (e.type == EventType.MouseDown && e.button == 0 && _previewPickupObject)
                     {
                         AddPickObject(_currentPickObject, _previewPickupObject.transform.position);
@@ -633,6 +674,95 @@ namespace Pancake.Editor
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// only use when determined root
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="ray"></param>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        private (bool, RaycastHit?) RayCast(Component root, Ray ray, out Vector3 point)
+        {
+            point = Vector3.zero;
+            if (root.gameObject.scene.GetPhysicsScene().Raycast(ray.origin, ray.direction, out var hit))
+            {
+                point = hit.point;
+                return (true, hit);
+            }
+
+            return (false, null);
+        }
+
+        /// <summary>
+        /// only use when determined root
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="screenPoint"></param>
+        /// <param name="distance"></param>
+        /// <returns></returns>
+        private (Vector3, RaycastHit?) RaycastPoint(Component root, Vector2 screenPoint, float distance = 20)
+        {
+            var ray = SceneView.currentDrawingSceneView.camera.ScreenPointToRay(screenPoint);
+            var result = RayCast(root, ray, out var point);
+            if (!result.Item1)
+            {
+                point = ray.origin + ray.direction.normalized * distance;
+            }
+
+            return (point, result.Item2);
+        }
+
+        /// <summary>
+        /// for mesh with irregular shape the returned result is incorrect
+        /// missing some direction
+        /// </summary>
+        /// <param name="rendererAttach"></param>
+        /// <param name="rendererOther"></param>
+        /// <param name="hitInfo"></param>
+        /// <returns></returns>
+        private Vector3 GetSpawnPosition(Renderer rendererAttach, Renderer rendererOther, RaycastHit hitInfo)
+        {
+            var boundsAttach = rendererAttach.bounds;
+            var boundsOther = rendererOther.bounds;
+
+            var otherPos = hitInfo.collider.gameObject.transform.position;
+            var pointPos = hitInfo.point;
+
+            int isSpawnRighSide;
+            if (Mathf.Abs(otherPos.x - pointPos.x) >= boundsOther.size.x / 2)
+            {
+                isSpawnRighSide = otherPos.x > pointPos.x ? -1 : 1;
+            }
+            else
+            {
+                isSpawnRighSide = 0;
+            }
+
+            int isSpawnUpSide;
+            if (Mathf.Abs(otherPos.y - pointPos.y) >= boundsOther.size.y / 2)
+            {
+                isSpawnUpSide = otherPos.y > pointPos.y ? -1 : 1;
+            }
+            else
+            {
+                isSpawnUpSide = 0;
+            }
+
+            int isSpawnForwardSide;
+            if (Mathf.Abs(otherPos.z - pointPos.z) >= boundsOther.size.z / 2)
+            {
+                isSpawnForwardSide = otherPos.z > pointPos.z ? -1 : 1;
+            }
+            else
+            {
+                isSpawnForwardSide = 0;
+            }
+
+            return new Vector3(hitInfo.point.x + (boundsAttach.size.x / 2 * isSpawnRighSide),
+                hitInfo.point.y + (boundsAttach.size.y / 2 * isSpawnUpSide),
+                hitInfo.point.z + (boundsAttach.size.z / 2 * isSpawnForwardSide));
         }
 
         /// <summary>
@@ -644,61 +774,64 @@ namespace Pancake.Editor
         {
             if (pickObject?.pickedObject)
             {
-                Transform parent;
-
-#if UNITY_2021_1_OR_NEWER
-                UnityEditor.SceneManagement.PrefabStage currentPrefabState;
-                currentPrefabState = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-#else
-                UnityEditor.Experimental.SceneManagement.PrefabStage currentPrefabState;
-                currentPrefabState = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-#endif
-
-                if (currentPrefabState != null)
-                {
-                    var prefabRoot = currentPrefabState.prefabContentsRoot.transform;
-                    if (_optionsSpawn[_selectedSpawn] == "Default")
-                    {
-                        parent = prefabRoot;
-                    }
-                    else
-                    {
-                        parent = _rootSpawn ? _rootSpawn.transform : prefabRoot;
-                    }
-                }
-                else
-                {
-                    if (_optionsSpawn[_selectedSpawn] == "Default")
-                    {
-                        parent = null;
-                    }
-                    else
-                    {
-                        parent = _rootSpawn ? _rootSpawn.transform : null;
-                    }
-                }
-
-                var inst = pickObject.pickedObject.Instantiate(parent);
+                var inst = pickObject.pickedObject.Instantiate(GetParent());
                 inst.transform.position = worldPos;
-
-                // if (inst.CalculateBounds(out var bounds,
-                //         Space.World,
-                //         true,
-                //         false,
-                //         false,
-                //         false))
-                // {
-                //     var difference = worldPos.y - bounds.min.y;
-                //
-                //     inst.transform.position += difference * Vector3.up;
-                // }
-                //
-                // inst.transform.position = inst.transform.position.Change(y: 0);
-
                 Undo.RegisterCreatedObjectUndo(inst.gameObject, "Create pick obj");
                 Selection.activeObject = inst;
             }
         }
+
+        private Transform GetParent()
+        {
+            Transform parent = null;
+            var currentPrefabState = GetCurrentPrefabStage();
+
+            if (currentPrefabState != null)
+            {
+                var prefabRoot = currentPrefabState.prefabContentsRoot.transform;
+                switch (_optionsSpawn[_selectedSpawn].ToLower())
+                {
+                    case "default":
+                        parent = prefabRoot;
+                        break;
+                    case "index":
+                        if (_rootIndexSpawn < 0) parent = prefabRoot;
+                        else if (prefabRoot.childCount - 1 > _rootIndexSpawn) parent = prefabRoot.GetChild(_rootIndexSpawn);
+                        else parent = prefabRoot;
+                        break;
+                    case "custom":
+                        parent = _rootSpawn ? _rootSpawn.transform : prefabRoot;
+                        break;
+                }
+            }
+            else
+            {
+                switch (_optionsSpawn[_selectedSpawn].ToLower())
+                {
+                    case "default":
+                    case "index":
+                        parent = null;
+                        break;
+                    case "custom":
+                        parent = _rootSpawn ? _rootSpawn.transform : null;
+                        break;
+                }
+            }
+
+            return parent;
+        }
+
+#if UNITY_2021_1_OR_NEWER
+        private UnityEditor.SceneManagement.PrefabStage GetCurrentPrefabStage()
+        {
+            return UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        }
+#else
+        private UnityEditor.Experimental.SceneManagement.PrefabStage GetCurrentPrefabStage()
+        {
+            return UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        }
+#endif
 
         /// <summary>
         /// Calculate count item pickup can display
