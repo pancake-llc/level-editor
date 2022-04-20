@@ -110,14 +110,14 @@ namespace Pancake.Editor
             if (!CanCreatePreview(obj))
             {
                 onCapturedCallback?.Invoke(null);
-                return null;
+                return Uniform.PrefabIcon;
             }
 
             var cachedPosition = obj.transform.position;
             var prevObj = clone ? Object.Instantiate(obj, null) : obj;
             prevObj.transform.position = previewPosition + latePreviewQueued * latePreviewOffset;
 
-            var bounds = Util.GetRendererBounds(prevObj, false);
+            var bounds = prevObj.GetRendererBounds(false);
             var size = GetImageSize(bounds);
             var cam = CreatePreviewCamera(bounds);
             var light = CreatePreviewLight(bounds);
