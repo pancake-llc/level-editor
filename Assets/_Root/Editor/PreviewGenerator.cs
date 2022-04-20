@@ -120,6 +120,7 @@ namespace Pancake.Editor
             var bounds = Util.GetRendererBounds(prevObj, false);
             var size = GetImageSize(bounds);
             var cam = CreatePreviewCamera(bounds);
+            var light = CreatePreviewLight(bounds);
 
             latePreviewQueued++;
             var dummy = DummyBehaviour.Create("Preview dummy");
@@ -137,6 +138,7 @@ namespace Pancake.Editor
                 }
 
                 Object.DestroyImmediate(cam.gameObject);
+                Object.DestroyImmediate(light.gameObject);
                 Object.DestroyImmediate(dummy.gameObject);
             }
 
@@ -172,7 +174,6 @@ namespace Pancake.Editor
         {
             var camObj = new GameObject("Preview generator camera");
             var cam = camObj.AddComponent<Camera>();
-            cam.name = "Preview generator camera";
 
             cam.transform.position = bounds.center + Vector3.back * (bounds.extents.z + 2);
             cam.nearClipPlane = 0.01f;
@@ -189,6 +190,18 @@ namespace Pancake.Editor
             cam.enabled = false;
 
             return cam;
+        }
+        
+        private Light CreatePreviewLight(Bounds bounds)
+        {
+            var lightObj = new GameObject("Preview generator light");
+            var light = lightObj.AddComponent<Light>();
+
+            light.type = LightType.Directional;
+            light.transform.position = bounds.center + Vector3.back * (bounds.extents.z + 2);
+            light.color = Color.white;
+            light.intensity = 1;
+            return light;
         }
 
         private Vector2Int GetImageSize(Bounds bounds)
