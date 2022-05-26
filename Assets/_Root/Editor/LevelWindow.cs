@@ -67,7 +67,7 @@ namespace Pancake.Editor
         [MenuItem("Tools/Pancake/Level Editor/Show &_3")]
         public static void OpenEditor()
         {
-            var window = EditorWindow.GetWindow<LevelEditor>("Level Editor", true, UtilEditor.InspectorWindow);
+            var window = EditorWindow.GetWindow<LevelEditor>("Level Editor", true, InEditor.InspectorWindow);
 
             if (window)
             {

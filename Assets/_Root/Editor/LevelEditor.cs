@@ -25,7 +25,7 @@ namespace Pancake.Editor
         private string _dataPath;
 
         // ReSharper disable once FieldCanBeMadeReadOnly.Local
-        private static UtilEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new UtilEditor.ProjectSetting<LevelEditorSettings>();
+        private static InEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new InEditor.ProjectSetting<LevelEditorSettings>();
 
         private static Vector2 EventMousePoint
         {
@@ -141,7 +141,7 @@ namespace Pancake.Editor
                         if (File.Exists(str)) nameFileExclude.Add(Path.GetFileNameWithoutExtension(str));
                     }
 
-                    levelObjects = UtilEditor.FindAllAssetsWithPath<GameObject>(whitePath.Replace(Application.dataPath, "").Replace("Assets/", ""))
+                    levelObjects = InEditor.FindAllAssetsWithPath<GameObject>(whitePath.Replace(Application.dataPath, "").Replace("Assets/", ""))
                         .Where(lo => !(lo is null) && !nameFileExclude.Exists(_ => _.Equals(lo.name)))
                         .ToList();
                 }
@@ -596,16 +596,16 @@ namespace Pancake.Editor
             Vector3 mousePosition;
             if (sceneView.in2DMode)
             {
-                bool state = UtilEditor.Get2DMouseScenePosition(out var mousePosition2d);
+                bool state = InEditor.Get2DMouseScenePosition(out var mousePosition2d);
                 mousePosition = mousePosition2d;
                 if (!state) return;
-                UtilEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
+                InEditor.FakeRenderSprite(_currentPickObject.pickedObject, mousePosition, Vector3.one, Quaternion.identity);
                 SceneView.RepaintAll();
 
                 if (e.type == EventType.MouseDown && e.button == 0)
                 {
                     AddPickObject(_currentPickObject, mousePosition);
-                    UtilEditor.SkipEvent();
+                    InEditor.SkipEvent();
                 }
             }
             else
@@ -670,7 +670,7 @@ namespace Pancake.Editor
                     if (e.type == EventType.MouseDown && e.button == 0 && _previewPickupObject)
                     {
                         AddPickObject(_currentPickObject, _previewPickupObject.transform.position);
-                        UtilEditor.SkipEvent();
+                        InEditor.SkipEvent();
                     }
                 }
             }
