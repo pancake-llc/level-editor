@@ -523,19 +523,18 @@ namespace Pancake.Editor
                 }
                 
                 _height += position.height;
-                Debug.Log(_height + "    : " + position.height);
                 _pickObjectScrollPosition = GUILayout.BeginScrollView(_pickObjectScrollPosition, GUILayout.Height(_height));
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
                 foreach (var splitGroupObject in resultSplitGroupObjects)
                 {
                     string nameGroup = splitGroupObject[0].group.ToUpper();
                     _height -=DefaultHeaderHeight;
-                    Uniform.DrawUppercaseSection($"LEVEL_EDITOR_PICKUP_AREA_CHILD_{nameGroup}", nameGroup, () => DrawInGroup(splitGroupObject, ref _height));
+                    Uniform.DrawUppercaseSection($"LEVEL_EDITOR_PICKUP_AREA_CHILD_{nameGroup}", nameGroup, () => DrawInGroup(splitGroupObject));
                 }
                 GUILayout.EndScrollView();
             }
 
-            void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup, ref float h)
+            void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup)
             {
                 var counter = 0;
                 CalculateIdealCount(position.width - 50,
@@ -545,8 +544,6 @@ namespace Pancake.Editor
                     out int count,
                     out float size);
                 count = Mathf.Max(1, count);
-                //int totalRow = M.CeilToInt(pickObjectsInGroup.Count / (float)count);
-                //h += size * totalRow;
                 while (counter >= 0 && counter < pickObjectsInGroup.Count)
                 {
                     EditorGUILayout.BeginHorizontal();
