@@ -23,6 +23,10 @@ namespace Pancake.Editor
         private int _rootIndexSpawn;
         private GameObject _previewPickupObject;
         private string _dataPath;
+        private const float DropAreaHeightFoldout = 110f;
+        private const float DefaultHeaderHeight = 30f;
+        private const float SelectedObjectPreviewHeight = 100f;
+        private float _height;
 
         // ReSharper disable once FieldCanBeMadeReadOnly.Local
         private static InEditor.ProjectSetting<LevelEditorSettings> levelEditorSettings = new InEditor.ProjectSetting<LevelEditorSettings>();
@@ -176,6 +180,7 @@ namespace Pancake.Editor
 
         private void OnGUI()
         {
+            _height = 0f;
             Uniform.SpaceTwoLine();
             if (TryClose()) return;
             if (CheckEscape()) return;
@@ -189,10 +194,12 @@ namespace Pancake.Editor
 
         private void InternalDrawDropArea()
         {
+            _height -= DefaultHeaderHeight;
             Uniform.DrawUppercaseSection("LEVEL_EDITOR_DROP_AREA", "DROP AREA", DrawDropArea);
 
             void DrawDropArea()
             {
+                _height -= DropAreaHeightFoldout - DefaultHeaderHeight;
                 GUILayout.Space(2);
                 float width = 0;
                 var @event = Event.current;
@@ -291,6 +298,7 @@ namespace Pancake.Editor
                             {
                                 foreach (string t in levelEditorSettings.Settings.pickupObjectWhiteList.ToList())
                                 {
+                                    _height -= 18;
                                     DrawRow(t, width, _ => levelEditorSettings.Settings.pickupObjectWhiteList.Remove(_));
                                 }
                             }
@@ -452,10 +460,12 @@ namespace Pancake.Editor
 
         private void InternalDrawSetting()
         {
+            _height -= DefaultHeaderHeight;
             Uniform.DrawUppercaseSection("LEVEL_EDITOR_CONFIG", "SETTING", DrawSetting);
 
             void DrawSetting()
             {
+                _height -= DefaultHeaderHeight;
                 _selectedSpawn = EditorGUILayout.Popup("Where Spawn", _selectedSpawn, _optionsSpawn);
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -483,6 +493,10 @@ namespace Pancake.Editor
 
         private void InternalDrawPickupArea()
         {
+            _height -= DefaultHeaderHeight;
+            _height -= DefaultHeaderHeight;
+            _height -= DefaultHeaderHeight;
+            _height -= 18f;
             Uniform.DrawUppercaseSectionWithRightClick("LEVEL_EDITOR_PICKUP_AREA", "PICKUP AREA", DrawPickupArea, ShowMenuRefresh);
 
             void DrawPickupArea()
@@ -490,6 +504,8 @@ namespace Pancake.Editor
                 var tex = LevelWindow.GetPreview(_currentPickObject?.pickedObject);
                 if (tex)
                 {
+                    _height -= SelectedObjectPreviewHeight;
+                    _height -= DefaultHeaderHeight;
                     string pickObjectName = _currentPickObject?.pickedObject.name;
                     Uniform.SpaceOneLine();
                     Uniform.Horizontal(() =>
@@ -505,16 +521,21 @@ namespace Pancake.Editor
                 {
                     Uniform.HelpBox("Select An Object First", MessageType.Info);
                 }
-
+                
+                _height += position.height;
+                Debug.Log(_height + "    : " + position.height);
+                _pickObjectScrollPosition = GUILayout.BeginScrollView(_pickObjectScrollPosition, GUILayout.Height(_height));
                 var resultSplitGroupObjects = PickObjects.GroupBy(_ => _.group).Select(_ => _.ToList()).ToList();
                 foreach (var splitGroupObject in resultSplitGroupObjects)
                 {
                     string nameGroup = splitGroupObject[0].group.ToUpper();
-                    Uniform.DrawUppercaseSection($"LEVEL_EDITOR_PICKUP_AREA_CHILD_{nameGroup}", nameGroup, () => DrawInGroup(splitGroupObject));
+                    _height -=DefaultHeaderHeight;
+                    Uniform.DrawUppercaseSection($"LEVEL_EDITOR_PICKUP_AREA_CHILD_{nameGroup}", nameGroup, () => DrawInGroup(splitGroupObject, ref _height));
                 }
+                GUILayout.EndScrollView();
             }
 
-            void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup)
+            void DrawInGroup(IReadOnlyList<PickObject> pickObjectsInGroup, ref float h)
             {
                 var counter = 0;
                 CalculateIdealCount(position.width - 50,
@@ -524,6 +545,8 @@ namespace Pancake.Editor
                     out int count,
                     out float size);
                 count = Mathf.Max(1, count);
+                //int totalRow = M.CeilToInt(pickObjectsInGroup.Count / (float)count);
+                //h += size * totalRow;
                 while (counter >= 0 && counter < pickObjectsInGroup.Count)
                 {
                     EditorGUILayout.BeginHorizontal();
