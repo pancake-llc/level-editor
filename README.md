@@ -5,12 +5,12 @@ Provive easy way create level design
 # How To Install
 
 
-For version 1.1.3
+For version `1.1.4`
 
 Add following line
 
 ```csharp
-"com.pancake.level-editor": "https://github.com/pancake-llc/level-editor.git?path=Assets/_Root#1.1.3",
+"com.pancake.level-editor": "https://github.com/pancake-llc/level-editor.git?path=Assets/_Root#1.1.4",
 "com.pancake.common": "https://github.com/pancake-llc/common.git?path=Assets/_Root#1.2.5",
 ```
 
